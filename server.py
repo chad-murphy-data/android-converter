@@ -87,13 +87,17 @@ def determine_outcome(text: str) -> str:
     converted_phrases = [
         "i'll give it a shot", "i'll check out android", "you've convinced me",
         "maybe i'll try", "i'm interested", "sign me up", "you got me",
-        "i'll consider switching", "let's do it", "i'm in"
+        "i'll consider switching", "let's do it", "i'm in", "i'm sold",
+        "i'm pretty sold", "make the jump", "make the switch", "gonna look into",
+        "going to look into", "i'll try", "convinced me", "swing by a store",
+        "walk out with a new", "getting excited"
     ]
 
     # Staying indicators
     staying_phrases = [
         "i'm good with", "sticking with", "staying with", "i'll pass",
-        "not for me", "i'm happy with my iphone", "no thanks", "nah"
+        "not for me", "i'm happy with my iphone", "no thanks", "nah",
+        "not switching", "not interested", "i'll stick with"
     ]
 
     for phrase in converted_phrases:
