@@ -156,6 +156,9 @@ function handleSessionEnd(data) {
     const profile = data.actual_profile;
     const predictionClass = data.prediction_correct ? 'correct' : 'incorrect';
     const predictionText = data.prediction_correct ? 'Correct!' : 'Wrong';
+    const pitchMatched = data.pitch_used === profile.primary_loyalty;
+    const pitchClass = pitchMatched ? 'correct' : 'incorrect';
+    const pitchMatchText = pitchMatched ? 'Matched!' : 'Mismatched';
 
     card.innerHTML = `
         <h3>${outcomeText[data.outcome]}</h3>
@@ -165,6 +168,9 @@ function handleSessionEnd(data) {
             <div><span class="label">Disclosure:</span> ${profile.disclosure_style}</div>
             <div><span class="label">Prediction:</span> ${data.advocate_prediction || 'N/A'}
                 <span class="prediction-badge ${predictionClass}">${predictionText}</span>
+            </div>
+            <div><span class="label">Pitch Used:</span> ${data.pitch_used || 'N/A'}
+                <span class="prediction-badge ${pitchClass}">${pitchMatchText}</span>
             </div>
         </div>
     `;

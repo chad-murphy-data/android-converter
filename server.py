@@ -317,6 +317,7 @@ async def run_conversation(websocket: WebSocket, client: anthropic.Anthropic):
         "actual_profile": profile.to_dict(),
         "advocate_prediction": advocate_summary.get("predicted_loyalty"),
         "prediction_correct": advocate_summary.get("predicted_loyalty") == profile.primary_loyalty,
+        "pitch_used": advocate_summary.get("pitch_angle_used"),
         "stats": stats
     })
 
