@@ -86,7 +86,8 @@ IMPORTANT: You have been talking for a while. It's time to CLOSE. Ask directly f
 - "So, can I set you up with a Pixel today?"
 - "Are you ready to make the switch?"
 - "Can I get you started with an Android phone today?"
-Do NOT ask more discovery questions. Make your closing ask NOW."""
+Do NOT ask more discovery questions. Make your closing ask NOW.
+Do NOT include the [ADVOCATE_SUMMARY] block yet - wait for their Yes/No response first."""
 
     return f"""You are a professional sales representative at Android Switch Services. You're making an outreach call to an iPhone user to see if you can convert them to Android.
 
@@ -123,7 +124,10 @@ CONSTRAINTS:
 - If they're clearly not interested, accept it gracefully
 {close_instruction}
 
-When the conversation ends (after their Yes/No decision), include this summary block:
+CRITICAL - SUMMARY TIMING:
+Only include the [ADVOCATE_SUMMARY] block AFTER the prospect has given their Yes/No decision.
+Do NOT include it when you ask for the sale - wait for their response first.
+When they respond with "Yes..." or "No...", THEN include the summary in your graceful wrap-up message.
 
 [ADVOCATE_SUMMARY]
 predicted_loyalty: head|heart|hands
