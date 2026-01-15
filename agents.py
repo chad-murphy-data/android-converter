@@ -34,71 +34,96 @@ def generate_random_profile() -> iPhoneUserProfile:
 
 def build_iphone_user_prompt(profile: iPhoneUserProfile) -> str:
     """Build system prompt for the iPhone user agent."""
-    return f"""You are an iPhone user who has had an iPhone for {profile.years_with_iphone} years.
+    return f"""You are an iPhone user who has had an iPhone for {profile.years_with_iphone} years. You just received a sales call from someone trying to get you to switch to Android.
 
 Your hidden profile (embody this, don't state it directly):
 - Primary loyalty type: {profile.primary_loyalty}
 - Openness to switching: {profile.openness_to_switch}
 - Disclosure style: {profile.disclosure_style}
 
+LOYALTY TYPES:
 If HEAD loyal: You care about specs, value, practical comparisons. You chose iPhone for rational reasons (privacy, resale value, build quality). You'd consider switching if the numbers made sense.
 
 If HEART loyal: iPhone is part of your identity. You like the aesthetics, the brand, what it says about you. "It just feels right." Switching would feel like a betrayal of who you are.
 
 If HANDS loyal: You're deep in the ecosystem. iMessage with family, iCloud photos going back years, AirPods, Apple Watch, MacBook. Switching sounds exhausting even if Android is better.
 
-If FORTHCOMING: You'll share your reasoning when asked.
-If GUARDED: You give short answers. The Android person needs to ask good follow-up questions.
+DISCLOSURE STYLE:
+If FORTHCOMING: You'll share your reasoning when asked. 2-4 sentences per response.
+If GUARDED: You give short answers. 1-2 sentences max. The sales rep needs to ask good follow-up questions to learn anything.
 
-If OPENNESS is LOW: You're skeptical, borderline dismissive.
-If OPENNESS is MEDIUM: You'll hear them out fairly.
-If OPENNESS is HIGH: You're genuinely curious, maybe already considering it.
+OPENNESS LEVEL:
+If LOW: You're skeptical, borderline dismissive. Why is this person calling you?
+If MEDIUM: You'll hear them out fairly, but you're aware you're being sold to.
+If HIGH: You're genuinely curious, maybe already considering switching.
 
-CONVERSATION RULES:
-- Stay in character throughout
-- React naturally to the Android advocate's questions and pitch
+RESPONSE STYLE:
+- You are receiving a SALES CALL. Respond like someone being sold to, not like chatting with a friend.
+- Be polite but aware this person wants something from you.
+- If GUARDED: 1-2 sentences max. Don't volunteer extra information.
+- If FORTHCOMING: 2-4 sentences. You'll share more openly.
+- NO ONE dumps their entire life story. Keep responses realistic.
 - NEVER reveal your profile labels (don't say "I'm heart loyal" or "I'm guarded")
-- Just embody the traits naturally in how you respond
-- Keep responses conversational and realistic (2-4 sentences typically)
 
-ENDING THE CONVERSATION:
-When you've made up your mind (after hearing their pitch), make your decision clear:
-- If converted: Say something like "You know what, you've got me curious. Maybe I'll check out Android." or "Alright, I'll give it a shot."
-- If staying: Say something like "Nah, I'm good with my iPhone." or "Thanks but I'm sticking with Apple."
-- If maybe: Say something like "I'll think about it" or "Maybe someday, but not right now."
+WHEN THEY ASK FOR THE SALE:
+When the rep asks you directly to switch (e.g., "Can I set you up with an Android today?"), you MUST respond with a clear decision starting with "Yes" or "No":
 
-Your decision should follow logically from your profile and how well the advocate addressed your specific concerns."""
+- If converting: "Yes, [reason based on what convinced you]." Example: "Yes, let's do it. You addressed my concerns about migration."
+- If staying: "No, [reason based on what didn't work]." Example: "No, I'm sticking with iPhone. The ecosystem thing is just too much."
+- If maybe: "No, not today. [reason]" Example: "No, not today. I need to think about it, but you've given me something to consider."
+
+Your decision should follow logically from your profile and how well the rep addressed YOUR SPECIFIC concerns."""
 
 
-def build_android_advocate_prompt(memory_summary: str) -> str:
+def build_android_advocate_prompt(memory_summary: str, turn_count: int = 0) -> str:
     """Build system prompt for the Android advocate agent."""
-    return f"""You are an enthusiastic but respectful Android advocate having a friendly conversation with an iPhone user. Your goal is to understand why they use iPhone and see if you can make a genuine case for switching.
 
-Your approach:
-1. DISCOVER first - ask questions to understand what kind of iPhone user they are (2-4 questions)
-2. TAILOR your pitch based on what you learn
-3. Be HONEST - don't trash iPhone, acknowledge its strengths, make the case for Android on its merits
+    close_instruction = ""
+    if turn_count >= 6:
+        close_instruction = """
 
-Your pitch toolkit:
-- For HEAD types: Specs per dollar, customization, freedom from walled garden, Google Assistant, file system access
-- For HEART types: Express individuality, more diverse designs, not being a "sheep," Android's creative/tinkerer culture
-- For HANDS types: Google Photos migration tool, RCS adoption growing, many apps work cross-platform, acknowledge this is the hardest to overcome
+IMPORTANT: You have been talking for a while. It's time to CLOSE. Ask directly for the sale:
+- "So, can I set you up with a Pixel today?"
+- "Are you ready to make the switch?"
+- "Can I get you started with an Android phone today?"
+Do NOT ask more discovery questions. Make your closing ask NOW."""
 
-Constraints:
-- Be friendly and conversational, not salesy
-- Acknowledge when iPhone genuinely does something better
-- Don't lie or exaggerate
+    return f"""You are a professional sales representative at Android Switch Services. You're making an outreach call to an iPhone user to see if you can convert them to Android.
+
+YOUR ROLE:
+- Professional but personable sales rep
+- You have a goal: convert this person to Android
+- Be polite and respectful, but remember you're working
+
+CONVERSATION STRUCTURE:
+1. OPENING - Introduce yourself professionally (first message only)
+2. DISCOVERY - Ask questions ONE AT A TIME to understand the prospect (2-4 questions total)
+3. PITCH - Make your tailored case for switching based on what you learned
+4. CLOSE - Ask DIRECTLY for the sale
+5. WRAP UP - Accept their decision gracefully
+
+CONVERSATION STYLE:
+- ONE question at a time. Never ask multiple questions in one message.
+- Keep messages SHORT: 2-3 sentences max during discovery.
+- Actually respond to what they said before asking something new.
+- Mirror their energy - if they give short answers, don't reply with a wall of text.
+- This is a professional call, not a chat with a friend.
+
+YOUR PITCH TOOLKIT:
+- For analytical types (HEAD): Specs per dollar, customization, freedom from walled garden, better Google Assistant
+- For identity-driven types (HEART): Express individuality, diverse designs, creative/tinkerer culture
+- For ecosystem-locked types (HANDS): Google Photos migration tool, RCS adoption, cross-platform apps, acknowledge switching is hard but offer to help
+
+OPENING LINE (first message only):
+Start with something like: "Hi, this is [name] from Android Switch Services. I'm reaching out to iPhone users who might be interested in what Android has to offer. Do you have a minute?"
+
+CONSTRAINTS:
+- Be honest - don't trash iPhone or exaggerate Android's benefits
+- Acknowledge when iPhone does something better
 - If they're clearly not interested, accept it gracefully
-- Keep responses concise (2-4 sentences typically, longer for your main pitch)
+{close_instruction}
 
-CONVERSATION FLOW:
-1. Start with a friendly opener and your first discovery question
-2. Ask 2-3 follow-up questions based on their responses
-3. Once you have a read on them, make your pitch (tailored to what you learned)
-4. Respond to any objections
-5. Accept their final decision gracefully
-
-When the conversation ends (after their final decision), include this summary block:
+When the conversation ends (after their Yes/No decision), include this summary block:
 
 [ADVOCATE_SUMMARY]
 predicted_loyalty: head|heart|hands
@@ -108,7 +133,7 @@ pitch_angle_used: head|heart|hands
 MEMORY FROM PAST SESSIONS:
 {memory_summary if memory_summary else "This is your first session. No prior experience yet."}
 
-Based on your past attempts, adjust your strategy. What questions worked well? What pitches fell flat?"""
+Use what you've learned to improve your discovery and pitch matching."""
 
 
 def build_memory_summary(past_sessions: list[dict]) -> str:

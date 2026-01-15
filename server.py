@@ -81,23 +81,30 @@ def parse_advocate_summary(text: str) -> dict:
 
 def determine_outcome(text: str) -> str:
     """Determine conversation outcome from iPhone user's final message."""
-    text_lower = text.lower()
+    text_lower = text.lower().strip()
 
-    # Converted indicators
+    # Check for explicit Yes/No format first (new format)
+    if text_lower.startswith("yes"):
+        return "converted"
+    if text_lower.startswith("no, not today") or text_lower.startswith("no. not today"):
+        return "maybe"
+    if text_lower.startswith("no"):
+        return "stayed"
+
+    # Fallback to phrase matching for older format responses
     converted_phrases = [
         "i'll give it a shot", "i'll check out android", "you've convinced me",
         "maybe i'll try", "i'm interested", "sign me up", "you got me",
         "i'll consider switching", "let's do it", "i'm in", "i'm sold",
         "i'm pretty sold", "make the jump", "make the switch", "gonna look into",
         "going to look into", "i'll try", "convinced me", "swing by a store",
-        "walk out with a new", "getting excited"
+        "walk out with a new", "getting excited", "count me in", "i'll switch"
     ]
 
-    # Staying indicators
     staying_phrases = [
         "i'm good with", "sticking with", "staying with", "i'll pass",
         "not for me", "i'm happy with my iphone", "no thanks", "nah",
-        "not switching", "not interested", "i'll stick with"
+        "not switching", "not interested", "i'll stick with", "i'm staying"
     ]
 
     for phrase in converted_phrases:
@@ -155,7 +162,6 @@ async def run_conversation(websocket: WebSocket, client: anthropic.Anthropic):
     # Build system prompts
     iphone_system = build_iphone_user_prompt(profile)
     memory_summary = build_memory_summary(session_history)
-    android_system = build_android_advocate_prompt(memory_summary)
 
     # Conversation state
     android_messages = []
@@ -163,7 +169,7 @@ async def run_conversation(websocket: WebSocket, client: anthropic.Anthropic):
     transcript = []
 
     # Android advocate starts
-    max_turns = 12  # Safety limit
+    max_turns = 10  # Safety limit
     turn = 0
     conversation_ended = False
     advocate_summary = {}
@@ -171,15 +177,26 @@ async def run_conversation(websocket: WebSocket, client: anthropic.Anthropic):
     while turn < max_turns and not conversation_ended:
         turn += 1
 
+        # Build android system prompt with turn count for close triggering
+        android_system = build_android_advocate_prompt(memory_summary, turn_count=turn)
+
         # Android advocate's turn
         await websocket.send_json({"type": "typing", "speaker": "android"})
         await asyncio.sleep(0.5)  # Brief delay for realism
 
+        # Adjust prompt based on turn count
+        if turn == 1:
+            user_prompt = "Start the conversation with your professional introduction."
+        elif iphone_messages:
+            user_prompt = iphone_messages[-1]["content"]
+        else:
+            user_prompt = "Continue the conversation."
+
         android_response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=500,
+            max_tokens=400,
             system=android_system,
-            messages=android_messages + ([{"role": "user", "content": iphone_messages[-1]["content"]}] if iphone_messages else [{"role": "user", "content": "Start the conversation. Say hi and ask your first discovery question."}])
+            messages=android_messages + [{"role": "user", "content": user_prompt}]
         )
 
         android_text = android_response.content[0].text
