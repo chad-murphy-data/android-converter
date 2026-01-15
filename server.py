@@ -18,6 +18,7 @@ from agents import (
     build_iphone_user_prompt,
     build_android_advocate_prompt,
     build_memory_summary,
+    analyze_learning_insights,
     iPhoneUserProfile
 )
 
@@ -124,6 +125,14 @@ def determine_outcome(text: str) -> str:
 @app.get("/")
 async def root():
     return FileResponse("static/index.html")
+
+
+@app.get("/api/insights")
+async def get_insights():
+    """Get the current learning insights from all sessions."""
+    insights = analyze_learning_insights(session_history)
+    insights["memory_summary"] = build_memory_summary(session_history)
+    return insights
 
 
 @app.websocket("/ws")

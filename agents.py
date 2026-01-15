@@ -136,43 +136,197 @@ MEMORY FROM PAST SESSIONS:
 Use what you've learned to improve your discovery and pitch matching."""
 
 
+def analyze_learning_insights(past_sessions: list[dict]) -> dict:
+    """Analyze past sessions to extract actionable learning insights."""
+    if not past_sessions:
+        return {}
+
+    insights = {
+        "total_sessions": len(past_sessions),
+        "overall_conversion_rate": 0,
+        "prediction_accuracy": 0,
+        "by_loyalty": {},
+        "by_openness": {},
+        "by_disclosure": {},
+        "pitch_effectiveness": {},
+        "key_learnings": []
+    }
+
+    converted = sum(1 for s in past_sessions if s["outcome"] == "converted")
+    correct_preds = sum(1 for s in past_sessions
+                       if s.get("advocate_predicted_loyalty") == s["iphone_user_profile"]["primary_loyalty"])
+
+    insights["overall_conversion_rate"] = round(100 * converted / len(past_sessions), 1)
+    insights["prediction_accuracy"] = round(100 * correct_preds / len(past_sessions), 1)
+
+    # Analyze by loyalty type
+    for loyalty in ["head", "heart", "hands"]:
+        matching = [s for s in past_sessions if s["iphone_user_profile"]["primary_loyalty"] == loyalty]
+        if matching:
+            conv = sum(1 for s in matching if s["outcome"] == "converted")
+            insights["by_loyalty"][loyalty] = {
+                "count": len(matching),
+                "converted": conv,
+                "rate": round(100 * conv / len(matching), 1)
+            }
+
+    # Analyze by openness level
+    for openness in ["low", "medium", "high"]:
+        matching = [s for s in past_sessions if s["iphone_user_profile"]["openness_to_switch"] == openness]
+        if matching:
+            conv = sum(1 for s in matching if s["outcome"] == "converted")
+            insights["by_openness"][openness] = {
+                "count": len(matching),
+                "converted": conv,
+                "rate": round(100 * conv / len(matching), 1)
+            }
+
+    # Analyze by disclosure style
+    for disclosure in ["forthcoming", "guarded"]:
+        matching = [s for s in past_sessions if s["iphone_user_profile"]["disclosure_style"] == disclosure]
+        if matching:
+            conv = sum(1 for s in matching if s["outcome"] == "converted")
+            insights["by_disclosure"][disclosure] = {
+                "count": len(matching),
+                "converted": conv,
+                "rate": round(100 * conv / len(matching), 1)
+            }
+
+    # Analyze pitch effectiveness (when pitch matches vs mismatches loyalty)
+    matched_pitch = [s for s in past_sessions
+                    if s.get("pitch_angle_used") == s["iphone_user_profile"]["primary_loyalty"]]
+    mismatched_pitch = [s for s in past_sessions
+                       if s.get("pitch_angle_used") and s.get("pitch_angle_used") != s["iphone_user_profile"]["primary_loyalty"]]
+
+    if matched_pitch:
+        conv = sum(1 for s in matched_pitch if s["outcome"] == "converted")
+        insights["pitch_effectiveness"]["matched"] = {
+            "count": len(matched_pitch),
+            "converted": conv,
+            "rate": round(100 * conv / len(matched_pitch), 1)
+        }
+
+    if mismatched_pitch:
+        conv = sum(1 for s in mismatched_pitch if s["outcome"] == "converted")
+        insights["pitch_effectiveness"]["mismatched"] = {
+            "count": len(mismatched_pitch),
+            "converted": conv,
+            "rate": round(100 * conv / len(mismatched_pitch), 1)
+        }
+
+    # Generate key learnings
+    key_learnings = []
+
+    # Learning: Pitch matching matters
+    if "matched" in insights["pitch_effectiveness"] and "mismatched" in insights["pitch_effectiveness"]:
+        matched_rate = insights["pitch_effectiveness"]["matched"]["rate"]
+        mismatched_rate = insights["pitch_effectiveness"]["mismatched"]["rate"]
+        if matched_rate > mismatched_rate + 10:
+            key_learnings.append(f"Matching pitch to loyalty type increases conversion by {matched_rate - mismatched_rate:.0f}%")
+        elif mismatched_rate > matched_rate:
+            key_learnings.append("Surprisingly, mismatched pitches are converting better - worth investigating")
+
+    # Learning: Which loyalty types are hardest
+    if insights["by_loyalty"]:
+        sorted_loyalty = sorted(insights["by_loyalty"].items(), key=lambda x: x[1]["rate"])
+        hardest = sorted_loyalty[0]
+        easiest = sorted_loyalty[-1]
+        if hardest[1]["rate"] < easiest[1]["rate"] - 15:
+            key_learnings.append(f"{hardest[0].upper()} types are hardest to convert ({hardest[1]['rate']}%). {easiest[0].upper()} types convert best ({easiest[1]['rate']}%)")
+
+    # Learning: Openness matters
+    if "low" in insights["by_openness"] and "high" in insights["by_openness"]:
+        low_rate = insights["by_openness"]["low"]["rate"]
+        high_rate = insights["by_openness"]["high"]["rate"]
+        if high_rate > low_rate + 20:
+            key_learnings.append(f"High-openness prospects convert at {high_rate}% vs {low_rate}% for low-openness")
+
+    # Learning: Guarded vs forthcoming
+    if "guarded" in insights["by_disclosure"] and "forthcoming" in insights["by_disclosure"]:
+        guarded_rate = insights["by_disclosure"]["guarded"]["rate"]
+        forth_rate = insights["by_disclosure"]["forthcoming"]["rate"]
+        if abs(guarded_rate - forth_rate) > 15:
+            better = "forthcoming" if forth_rate > guarded_rate else "guarded"
+            key_learnings.append(f"{better.capitalize()} prospects convert better ({max(guarded_rate, forth_rate)}% vs {min(guarded_rate, forth_rate)}%)")
+
+    # Learning: Best/worst combinations
+    combo_stats = {}
+    for s in past_sessions:
+        p = s["iphone_user_profile"]
+        combo = f"{p['primary_loyalty']}_{p['openness_to_switch']}"
+        if combo not in combo_stats:
+            combo_stats[combo] = {"total": 0, "converted": 0}
+        combo_stats[combo]["total"] += 1
+        if s["outcome"] == "converted":
+            combo_stats[combo]["converted"] += 1
+
+    # Find combos with enough data
+    significant_combos = {k: v for k, v in combo_stats.items() if v["total"] >= 3}
+    if significant_combos:
+        for combo, stats in significant_combos.items():
+            rate = 100 * stats["converted"] / stats["total"]
+            loyalty, openness = combo.split("_")
+            if rate == 0:
+                key_learnings.append(f"Never converted {loyalty.upper()} + {openness} openness (0/{stats['total']})")
+            elif rate == 100:
+                key_learnings.append(f"Always convert {loyalty.upper()} + {openness} openness ({stats['total']}/{stats['total']})")
+
+    insights["key_learnings"] = key_learnings[:5]  # Cap at 5 insights
+    return insights
+
+
 def build_memory_summary(past_sessions: list[dict]) -> str:
     """Build memory summary from past sessions for the Android advocate."""
     if not past_sessions:
         return ""
 
-    summary_parts = [f"You have completed {len(past_sessions)} previous sessions.\n"]
+    insights = analyze_learning_insights(past_sessions)
 
-    # Overall stats
-    converted = sum(1 for s in past_sessions if s["outcome"] == "converted")
-    correct_predictions = sum(1 for s in past_sessions
-                             if s.get("advocate_predicted_loyalty") == s["iphone_user_profile"]["primary_loyalty"])
+    summary_parts = [f"You have completed {insights['total_sessions']} sessions.\n"]
+    summary_parts.append(f"Overall conversion rate: {insights['overall_conversion_rate']}%")
+    summary_parts.append(f"Loyalty prediction accuracy: {insights['prediction_accuracy']}%\n")
 
-    summary_parts.append(f"Conversion rate: {converted}/{len(past_sessions)} ({100*converted//len(past_sessions) if past_sessions else 0}%)")
-    summary_parts.append(f"Loyalty prediction accuracy: {correct_predictions}/{len(past_sessions)}\n")
+    # Conversion by loyalty type
+    summary_parts.append("CONVERSION BY LOYALTY TYPE:")
+    for loyalty, stats in insights.get("by_loyalty", {}).items():
+        summary_parts.append(f"  {loyalty.upper()}: {stats['converted']}/{stats['count']} ({stats['rate']}%)")
 
-    # Recent sessions
-    recent = past_sessions[-5:]
-    summary_parts.append("Recent sessions:")
+    # Conversion by openness
+    summary_parts.append("\nCONVERSION BY OPENNESS:")
+    for openness, stats in insights.get("by_openness", {}).items():
+        summary_parts.append(f"  {openness.upper()}: {stats['converted']}/{stats['count']} ({stats['rate']}%)")
+
+    # Pitch effectiveness
+    if insights.get("pitch_effectiveness"):
+        summary_parts.append("\nPITCH MATCHING EFFECTIVENESS:")
+        if "matched" in insights["pitch_effectiveness"]:
+            m = insights["pitch_effectiveness"]["matched"]
+            summary_parts.append(f"  When pitch matched loyalty: {m['converted']}/{m['count']} ({m['rate']}%)")
+        if "mismatched" in insights["pitch_effectiveness"]:
+            m = insights["pitch_effectiveness"]["mismatched"]
+            summary_parts.append(f"  When pitch mismatched: {m['converted']}/{m['count']} ({m['rate']}%)")
+
+    # Key learnings
+    if insights.get("key_learnings"):
+        summary_parts.append("\nKEY LEARNINGS:")
+        for learning in insights["key_learnings"]:
+            summary_parts.append(f"  - {learning}")
+
+    # Recent sessions (last 3 only for context)
+    recent = past_sessions[-3:]
+    summary_parts.append("\nRECENT SESSIONS:")
     for session in recent:
         profile = session["iphone_user_profile"]
         outcome = session["outcome"]
-        predicted = session.get("advocate_predicted_loyalty", "unknown")
+        predicted = session.get("advocate_predicted_loyalty", "?")
+        pitch = session.get("pitch_angle_used", "?")
         actual = profile["primary_loyalty"]
-        match = "correct" if predicted == actual else "wrong"
+        pred_icon = "✓" if predicted == actual else "✗"
 
         summary_parts.append(
-            f"  Session {session['session_id']}: {outcome.upper()} | "
-            f"Actual: {actual}/{profile['openness_to_switch']} openness | "
-            f"You predicted: {predicted} ({match})"
+            f"  #{session['session_id']}: {outcome.upper()} | "
+            f"{actual}/{profile['openness_to_switch']}/{profile['disclosure_style']} | "
+            f"Predicted: {predicted}{pred_icon} | Pitch: {pitch}"
         )
-
-    # Patterns
-    summary_parts.append("\nPatterns observed:")
-    for loyalty in ["head", "heart", "hands"]:
-        matching = [s for s in past_sessions if s["iphone_user_profile"]["primary_loyalty"] == loyalty]
-        if matching:
-            conv = sum(1 for s in matching if s["outcome"] == "converted")
-            summary_parts.append(f"  {loyalty.upper()} types: {conv}/{len(matching)} converted")
 
     return "\n".join(summary_parts)

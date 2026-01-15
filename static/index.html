@@ -31,9 +31,27 @@
             <span class="stat maybe">Maybe: <strong id="maybe-count">0</strong></span>
         </div>
 
-        <button class="start-button" id="start-button">
-            Start New Conversation
-        </button>
+        <div class="button-row">
+            <button class="start-button" id="start-button">
+                Start New Conversation
+            </button>
+            <button class="insights-button" id="insights-button">
+                View Learning Insights
+            </button>
+        </div>
+
+        <!-- Insights Modal -->
+        <div class="modal-overlay" id="insights-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Learning Insights</h2>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body" id="insights-content">
+                    Loading...
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/static/script.js"></script>
