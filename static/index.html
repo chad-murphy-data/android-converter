@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android vs iPhone - Conversion Simulator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Android vs iPhone</h1>
+            <p class="subtitle">Conversion Simulator</p>
+        </header>
+
+        <div class="chat-window" id="chat-window">
+            <div class="chat-messages" id="chat-messages">
+                <div class="welcome-message">
+                    <p>Click the button below to start a conversation between an Android advocate and an iPhone user.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-bar" id="stats-bar">
+            <span>Session: <strong id="session-count">0</strong></span>
+            <span class="divider">|</span>
+            <span class="stat converted">Converted: <strong id="converted-count">0</strong></span>
+            <span class="divider">|</span>
+            <span class="stat stayed">Stayed: <strong id="stayed-count">0</strong></span>
+            <span class="divider">|</span>
+            <span class="stat maybe">Maybe: <strong id="maybe-count">0</strong></span>
+        </div>
+
+        <button class="start-button" id="start-button">
+            Start New Conversation
+        </button>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

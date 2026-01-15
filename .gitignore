@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+results/session_logs.json
+.venv/
+venv/
