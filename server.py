@@ -25,6 +25,10 @@ load_dotenv()
 
 app = FastAPI()
 
+# Ensure directories exist
+Path("images").mkdir(exist_ok=True)
+Path("results").mkdir(exist_ok=True)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/images", StaticFiles(directory="images"), name="images")
