@@ -248,10 +248,11 @@ function updateDashboard(data) {
     toneValue.className = `tone-value ${getToneClass(sentiment.emotional_tone)}`;
 
     // Show frustration warning if needed
-    const effectiveFrustration = Math.max(frustration || 0, sentiment.frustration || 0);
-    if (effectiveFrustration >= 6) {
+    // Use sentiment.frustration (the displayed value) for warning, not the accumulated state.frustration
+    const displayedFrustration = sentiment.frustration || 0;
+    if (displayedFrustration >= 6) {
         frustrationWarning.style.display = 'flex';
-        frustrationWarning.className = `frustration-warning ${effectiveFrustration >= 8 ? 'critical' : 'warning'}`;
+        frustrationWarning.className = `frustration-warning ${displayedFrustration >= 8 ? 'critical' : 'warning'}`;
     } else {
         frustrationWarning.style.display = 'none';
     }
