@@ -259,8 +259,17 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             "turn": state.turn
         })
 
-        # If agent closed or flagged, end call
+        # If agent closed or flagged, end call immediately
         if close_attempted or flag_used:
+            # Send a call-ending system message so UI knows conversation is over
+            end_reason = "closed the sale" if close_attempted else "flagged for fraud"
+            await websocket.send_json({
+                "type": "message",
+                "speaker": "system",
+                "text": f"[Call ended - Agent {end_reason}]",
+                "turn": state.turn,
+                "is_end": True
+            })
             break
 
         # Customer's turn
@@ -345,7 +354,26 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
                 "turn": state.turn,
                 "is_bounce": True
             })
+
+            # Send call-ending system message
+            await websocket.send_json({
+                "type": "message",
+                "speaker": "system",
+                "text": "[Call ended - Customer hung up]",
+                "turn": state.turn,
+                "is_end": True
+            })
             break
+
+    # If we hit max turns without a close/flag/bounce, send timeout message
+    if state.turn >= MAX_TURNS and not state.close_attempted and not state.flag_used and not state.customer_bounced:
+        await websocket.send_json({
+            "type": "message",
+            "speaker": "system",
+            "text": "[Call ended - Maximum turns reached]",
+            "turn": state.turn,
+            "is_end": True
+        })
 
     # Determine outcome
     converted = False

@@ -97,7 +97,7 @@ function handleMessage(data) {
             break;
         case 'message':
             hideTypingIndicator();
-            addMessage(data.speaker, data.text, data.is_bounce);
+            addMessage(data.speaker, data.text, data.is_bounce, data.is_end);
             if (data.turn) {
                 turnCount.textContent = data.turn;
             }
@@ -147,8 +147,21 @@ function handleCallStart(data) {
 }
 
 // Add a message bubble
-function addMessage(speaker, text, isBounce = false) {
+function addMessage(speaker, text, isBounce = false, isEnd = false) {
     const message = document.createElement('div');
+
+    // Handle system messages (call ended notifications)
+    if (speaker === 'system') {
+        message.className = 'message system-message';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble system-bubble';
+        bubble.textContent = text;
+        message.appendChild(bubble);
+        chatMessages.appendChild(message);
+        scrollToBottom();
+        return;
+    }
+
     message.className = `message ${speaker}${isBounce ? ' bounce' : ''}`;
 
     const avatar = document.createElement('div');
