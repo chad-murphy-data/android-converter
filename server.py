@@ -165,7 +165,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     greeting = f"Hi, thanks for calling TechMobile Android support! This is {agent.name}. How can I help you today?"
 
     await websocket.send_json({"type": "typing", "speaker": "agent"})
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(1.0)
 
     state.transcript.append({
         "speaker": "agent",
@@ -181,9 +181,9 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     })
 
     # Customer states their reason
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(1.0)
     await websocket.send_json({"type": "typing", "speaker": "customer"})
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(1.0)
 
     state.transcript.append({
         "speaker": "customer",
@@ -213,7 +213,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
         # Agent's turn
         await websocket.send_json({"type": "typing", "speaker": "agent"})
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(1.0)
 
         # Agent always responds to the last customer message
         user_content = customer_messages[-1]["content"]
@@ -264,9 +264,9 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             break
 
         # Customer's turn
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1.0)
         await websocket.send_json({"type": "typing", "speaker": "customer"})
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(1.0)
 
         customer_response = client.messages.create(
             model="claude-haiku-4-5-20251001",
