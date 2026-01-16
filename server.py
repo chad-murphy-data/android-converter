@@ -161,6 +161,49 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     agent_messages = []
     customer_messages = []
 
+    # Agent answers the phone with a scripted greeting (turn 0)
+    greeting = f"Hi, thanks for calling TechMobile Android support! This is {agent.name}. How can I help you today?"
+
+    await websocket.send_json({"type": "typing", "speaker": "agent"})
+    await asyncio.sleep(0.3)
+
+    state.transcript.append({
+        "speaker": "agent",
+        "text": greeting,
+        "turn": 0
+    })
+
+    await websocket.send_json({
+        "type": "message",
+        "speaker": "agent",
+        "text": greeting,
+        "turn": 0
+    })
+
+    # Customer states their reason
+    await asyncio.sleep(0.5)
+    await websocket.send_json({"type": "typing", "speaker": "customer"})
+    await asyncio.sleep(0.3)
+
+    state.transcript.append({
+        "speaker": "customer",
+        "text": customer.call_reason,
+        "turn": 0
+    })
+
+    await websocket.send_json({
+        "type": "message",
+        "speaker": "customer",
+        "text": customer.call_reason,
+        "turn": 0
+    })
+
+    # Add to message histories for context
+    agent_messages.append({"role": "assistant", "content": greeting})
+    agent_messages.append({"role": "user", "content": customer.call_reason})
+    customer_messages.append({"role": "user", "content": greeting})
+    customer_messages.append({"role": "assistant", "content": customer.call_reason})
+
     # Main conversation loop
     while state.turn < MAX_TURNS:
         state.turn += 1
@@ -172,14 +215,11 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         await websocket.send_json({"type": "typing", "speaker": "agent"})
         await asyncio.sleep(0.3)
 
-        # Determine user prompt for agent
-        if state.turn == 1:
-            user_content = f"A customer is calling. They said: \"{customer.call_reason}\""
-        else:
-            user_content = customer_messages[-1]["content"]
+        # Agent always responds to the last customer message
+        user_content = customer_messages[-1]["content"]
 
         agent_response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=300,
             system=agent_prompt,
             messages=agent_messages + [{"role": "user", "content": user_content}]
@@ -229,7 +269,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         await asyncio.sleep(0.3)
 
         customer_response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=200,
             system=customer_prompt,
             messages=customer_messages + [{"role": "user", "content": agent_text}]
@@ -399,7 +439,8 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         "new_pattern": new_pattern,
         "turns_used": state.turn,
         "final_sentiment": state.sentiment,
-        "overall_stats": get_overall_stats()
+        "overall_stats": get_overall_stats(),
+        "transcript": state.transcript
     })
 
 

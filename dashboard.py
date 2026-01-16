@@ -74,7 +74,7 @@ async def get_agent_confidence(
 
     try:
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=150,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -102,7 +102,15 @@ async def get_agent_confidence(
         }
 
     except (json.JSONDecodeError, KeyError, IndexError) as e:
+        print(f"Confidence parse error: {e}")
         # Return neutral defaults on parse error
+        return {
+            "fraud_likelihood": 5,
+            "motivation_guess": {"head": 33, "heart": 34, "hand": 33},
+            "reasoning": "Analysis in progress..."
+        }
+    except Exception as e:
+        print(f"Confidence call error: {e}")
         return {
             "fraud_likelihood": 5,
             "motivation_guess": {"head": 33, "heart": 34, "hand": 33},
@@ -132,7 +140,7 @@ async def get_customer_sentiment(
 
     try:
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=100,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -158,7 +166,18 @@ async def get_customer_sentiment(
         }
 
     except (json.JSONDecodeError, KeyError, IndexError) as e:
+        print(f"Sentiment parse error: {e}")
         # Return neutral defaults on parse error
+        return {
+            "satisfaction": 5,
+            "trust": 5,
+            "urgency": 5,
+            "frustration": 3,
+            "likelihood_to_convert": 5,
+            "emotional_tone": "neutral"
+        }
+    except Exception as e:
+        print(f"Sentiment call error: {e}")
         return {
             "satisfaction": 5,
             "trust": 5,
@@ -184,7 +203,7 @@ async def generate_learning(
     """
     try:
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=50,
             messages=[{"role": "user", "content": learning_prompt}]
         )

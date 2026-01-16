@@ -203,6 +203,7 @@ function hideTypingIndicator() {
 
 // Update dashboard with real-time data
 function updateDashboard(data) {
+    console.log('Dashboard update received:', data);
     const { confidence, sentiment, frustration, turn } = data;
 
     // Update turn count
@@ -287,26 +288,37 @@ function getToneClass(tone) {
     return 'neutral';
 }
 
-// Reset dashboard to initial state
+// Reset dashboard to initial state (neutral priors - no assumptions)
 function resetDashboard() {
-    fraudRiskBar.style.width = '30%';
-    fraudRiskValue.textContent = '3/10';
+    // Start with low fraud assumption
+    fraudRiskBar.style.width = '20%';
+    fraudRiskValue.textContent = '2/10';
+    fraudRiskBar.className = 'metric-fill fraud-fill low';
+
+    // Equal probability for all motivations (true neutral)
     headBar.style.width = '33%';
     headValue.textContent = '33%';
     heartBar.style.width = '33%';
     heartValue.textContent = '33%';
     handBar.style.width = '33%';
     handValue.textContent = '33%';
-    reasoningText.textContent = 'Analyzing caller...';
 
+    // Remove any dominant highlighting
+    document.querySelectorAll('.motivation-item').forEach(item => {
+        item.classList.remove('dominant');
+    });
+
+    reasoningText.textContent = 'Waiting for conversation to begin...';
+
+    // Neutral sentiment starting point
     satisfactionBar.style.width = '50%';
     satisfactionValue.textContent = '5';
     trustBar.style.width = '50%';
     trustValue.textContent = '5';
     urgencyBar.style.width = '50%';
     urgencyValue.textContent = '5';
-    frustrationBar.style.width = '30%';
-    frustrationValue.textContent = '3';
+    frustrationBar.style.width = '20%';
+    frustrationValue.textContent = '2';
     likelihoodBar.style.width = '50%';
     likelihoodValue.textContent = '5';
     toneValue.textContent = 'neutral';
@@ -382,6 +394,13 @@ function handleCallEnd(data) {
             <div class="detail-section">
                 <h4>New Learning</h4>
                 <p class="learning-text">${data.new_pattern}</p>
+            </div>
+            <div class="detail-section transcript-section">
+                <h4>Full Transcript</h4>
+                <button class="toggle-transcript" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === 'Show' ? 'Hide' : 'Show'">Show</button>
+                <div class="transcript-log hidden">
+                    ${data.transcript ? data.transcript.map(t => `<div class="transcript-line ${t.speaker}"><span class="speaker-label">${t.speaker.toUpperCase()}:</span> ${t.text}</div>`).join('') : '<p>No transcript available</p>'}
+                </div>
             </div>
         </div>
     `;
