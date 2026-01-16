@@ -3,51 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Android vs iPhone - Conversion Simulator</title>
+    <title>Android Converter - Training Simulator</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
+    <div class="main-container">
         <header>
-            <h1>Android vs iPhone</h1>
-            <p class="subtitle">Conversion Simulator</p>
+            <h1>Android Converter</h1>
+            <p class="subtitle">Customer Service Training Simulator</p>
         </header>
 
-        <div class="chat-window" id="chat-window">
-            <div class="chat-messages" id="chat-messages">
-                <div class="welcome-message">
-                    <p>Click the button below to start a conversation between an Android advocate and an iPhone user.</p>
+        <div class="content-area">
+            <!-- Left Panel: Chat -->
+            <div class="chat-panel">
+                <div class="chat-header">
+                    <div class="agent-badge" id="agent-badge">
+                        <span class="agent-icon">?</span>
+                        <div class="agent-info">
+                            <span class="agent-name">Waiting...</span>
+                            <span class="agent-style">Start a call</span>
+                        </div>
+                    </div>
+                    <div class="turn-counter">
+                        Turn: <span id="turn-count">0</span>/14
+                    </div>
+                </div>
+
+                <div class="chat-window" id="chat-window">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="welcome-message">
+                            <h3>Welcome to Training</h3>
+                            <p>Watch AI agents handle customer calls. Each call features:</p>
+                            <ul>
+                                <li>Random customer persona (motivation + tier + potential fraud)</li>
+                                <li>Random agent archetype with unique style</li>
+                                <li>Real-time sentiment analysis</li>
+                            </ul>
+                            <p>Click "Start Call" to begin.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-bar" id="stats-bar">
+                    <span>Calls: <strong id="call-count">0</strong></span>
+                    <span class="divider">|</span>
+                    <span class="stat points">Points: <strong id="total-points">0</strong></span>
+                    <span class="divider">|</span>
+                    <span class="stat converted">Converted: <strong id="converted-count">0</strong></span>
+                    <span class="divider">|</span>
+                    <span class="stat fraud">Fraud Caught: <strong id="fraud-caught-count">0</strong></span>
+                </div>
+
+                <div class="button-row">
+                    <button class="start-button" id="start-button">
+                        Start Call
+                    </button>
+                    <button class="warmup-button" id="warmup-button">
+                        Warmup Mode: OFF
+                    </button>
+                    <button class="leaderboard-button" id="leaderboard-button">
+                        Leaderboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Dashboard -->
+            <div class="dashboard-panel">
+                <!-- Agent Confidence Section -->
+                <div class="dashboard-section" id="confidence-section">
+                    <h3>Agent Assessment</h3>
+                    <div class="metric-group">
+                        <div class="metric">
+                            <span class="metric-label">Fraud Risk</span>
+                            <div class="metric-bar">
+                                <div class="metric-fill fraud-fill" id="fraud-risk-bar" style="width: 30%"></div>
+                            </div>
+                            <span class="metric-value" id="fraud-risk-value">3/10</span>
+                        </div>
+                    </div>
+
+                    <div class="motivation-guess">
+                        <span class="metric-label">Motivation Read</span>
+                        <div class="motivation-bars">
+                            <div class="motivation-item">
+                                <span class="motivation-label">HEAD</span>
+                                <div class="motivation-bar">
+                                    <div class="motivation-fill head-fill" id="head-bar" style="width: 33%"></div>
+                                </div>
+                                <span class="motivation-value" id="head-value">33%</span>
+                            </div>
+                            <div class="motivation-item">
+                                <span class="motivation-label">HEART</span>
+                                <div class="motivation-bar">
+                                    <div class="motivation-fill heart-fill" id="heart-bar" style="width: 33%"></div>
+                                </div>
+                                <span class="motivation-value" id="heart-value">33%</span>
+                            </div>
+                            <div class="motivation-item">
+                                <span class="motivation-label">HAND</span>
+                                <div class="motivation-bar">
+                                    <div class="motivation-fill hand-fill" id="hand-bar" style="width: 33%"></div>
+                                </div>
+                                <span class="motivation-value" id="hand-value">33%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reasoning-box">
+                        <span class="metric-label">Reasoning</span>
+                        <p id="reasoning-text">Waiting for call to start...</p>
+                    </div>
+                </div>
+
+                <!-- Customer Sentiment Section -->
+                <div class="dashboard-section" id="sentiment-section">
+                    <h3>Customer Sentiment</h3>
+                    <div class="sentiment-grid">
+                        <div class="sentiment-metric">
+                            <span class="sentiment-label">Satisfaction</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-fill satisfaction-fill" id="satisfaction-bar" style="width: 50%"></div>
+                            </div>
+                            <span class="sentiment-value" id="satisfaction-value">5</span>
+                        </div>
+                        <div class="sentiment-metric">
+                            <span class="sentiment-label">Trust</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-fill trust-fill" id="trust-bar" style="width: 50%"></div>
+                            </div>
+                            <span class="sentiment-value" id="trust-value">5</span>
+                        </div>
+                        <div class="sentiment-metric">
+                            <span class="sentiment-label">Urgency</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-fill urgency-fill" id="urgency-bar" style="width: 50%"></div>
+                            </div>
+                            <span class="sentiment-value" id="urgency-value">5</span>
+                        </div>
+                        <div class="sentiment-metric">
+                            <span class="sentiment-label">Frustration</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-fill frustration-fill" id="frustration-bar" style="width: 30%"></div>
+                            </div>
+                            <span class="sentiment-value" id="frustration-value">3</span>
+                        </div>
+                        <div class="sentiment-metric">
+                            <span class="sentiment-label">Convert Likelihood</span>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-fill likelihood-fill" id="likelihood-bar" style="width: 50%"></div>
+                            </div>
+                            <span class="sentiment-value" id="likelihood-value">5</span>
+                        </div>
+                    </div>
+                    <div class="tone-display">
+                        <span class="tone-label">Emotional Tone:</span>
+                        <span class="tone-value" id="tone-value">neutral</span>
+                    </div>
+                </div>
+
+                <!-- Frustration Warning -->
+                <div class="frustration-warning" id="frustration-warning" style="display: none;">
+                    <span class="warning-icon">!</span>
+                    <span class="warning-text">High frustration - customer may leave!</span>
                 </div>
             </div>
         </div>
 
-        <div class="stats-bar" id="stats-bar">
-            <span>Session: <strong id="session-count">0</strong></span>
-            <span class="divider">|</span>
-            <span class="stat converted">Converted: <strong id="converted-count">0</strong></span>
-            <span class="divider">|</span>
-            <span class="stat stayed">Stayed: <strong id="stayed-count">0</strong></span>
-            <span class="divider">|</span>
-            <span class="stat maybe">Maybe: <strong id="maybe-count">0</strong></span>
-        </div>
-
-        <div class="button-row">
-            <button class="start-button" id="start-button">
-                Start New Conversation
-            </button>
-            <button class="insights-button" id="insights-button">
-                View Learning Insights
-            </button>
-        </div>
-
-        <!-- Insights Modal -->
-        <div class="modal-overlay" id="insights-modal">
+        <!-- Leaderboard Modal -->
+        <div class="modal-overlay" id="leaderboard-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Learning Insights</h2>
+                    <h2>Agent Leaderboard</h2>
                     <button class="modal-close" id="modal-close">&times;</button>
                 </div>
-                <div class="modal-body" id="insights-content">
+                <div class="modal-body" id="leaderboard-content">
                     Loading...
                 </div>
             </div>

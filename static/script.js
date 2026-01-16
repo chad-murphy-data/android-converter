@@ -1,14 +1,62 @@
-// WebSocket connection and chat UI logic
+// WebSocket connection and UI logic for Android Converter Simulator
 
 let ws = null;
-let sessionCount = 0;
+let warmupMode = false;
 
+// DOM Elements
 const chatMessages = document.getElementById('chat-messages');
 const startButton = document.getElementById('start-button');
-const sessionCountEl = document.getElementById('session-count');
-const convertedCountEl = document.getElementById('converted-count');
-const stayedCountEl = document.getElementById('stayed-count');
-const maybeCountEl = document.getElementById('maybe-count');
+const warmupButton = document.getElementById('warmup-button');
+const leaderboardButton = document.getElementById('leaderboard-button');
+const turnCount = document.getElementById('turn-count');
+const callCount = document.getElementById('call-count');
+const totalPoints = document.getElementById('total-points');
+const convertedCount = document.getElementById('converted-count');
+const fraudCaughtCount = document.getElementById('fraud-caught-count');
+
+// Agent badge elements
+const agentBadge = document.getElementById('agent-badge');
+const agentIcon = agentBadge.querySelector('.agent-icon');
+const agentName = agentBadge.querySelector('.agent-name');
+const agentStyle = agentBadge.querySelector('.agent-style');
+
+// Dashboard elements
+const fraudRiskBar = document.getElementById('fraud-risk-bar');
+const fraudRiskValue = document.getElementById('fraud-risk-value');
+const headBar = document.getElementById('head-bar');
+const headValue = document.getElementById('head-value');
+const heartBar = document.getElementById('heart-bar');
+const heartValue = document.getElementById('heart-value');
+const handBar = document.getElementById('hand-bar');
+const handValue = document.getElementById('hand-value');
+const reasoningText = document.getElementById('reasoning-text');
+
+const satisfactionBar = document.getElementById('satisfaction-bar');
+const satisfactionValue = document.getElementById('satisfaction-value');
+const trustBar = document.getElementById('trust-bar');
+const trustValue = document.getElementById('trust-value');
+const urgencyBar = document.getElementById('urgency-bar');
+const urgencyValue = document.getElementById('urgency-value');
+const frustrationBar = document.getElementById('frustration-bar');
+const frustrationValue = document.getElementById('frustration-value');
+const likelihoodBar = document.getElementById('likelihood-bar');
+const likelihoodValue = document.getElementById('likelihood-value');
+const toneValue = document.getElementById('tone-value');
+const frustrationWarning = document.getElementById('frustration-warning');
+
+// Modal elements
+const leaderboardModal = document.getElementById('leaderboard-modal');
+const modalClose = document.getElementById('modal-close');
+const leaderboardContent = document.getElementById('leaderboard-content');
+
+// Agent style icons
+const AGENT_ICONS = {
+    'closer': 'C',
+    'detective': 'D',
+    'empath': 'E',
+    'robot': 'R',
+    'gambler': 'G'
+};
 
 // Connect to WebSocket
 function connect() {
@@ -18,12 +66,13 @@ function connect() {
     ws.onopen = () => {
         console.log('Connected to server');
         startButton.disabled = false;
+        loadInitialStats();
+        loadWarmupStatus();
     };
 
     ws.onclose = () => {
         console.log('Disconnected from server');
         startButton.disabled = true;
-        // Attempt to reconnect after a delay
         setTimeout(connect, 2000);
     };
 
@@ -40,55 +89,71 @@ function connect() {
 // Handle incoming WebSocket messages
 function handleMessage(data) {
     switch (data.type) {
-        case 'session_start':
-            handleSessionStart(data);
+        case 'call_start':
+            handleCallStart(data);
             break;
         case 'typing':
             showTypingIndicator(data.speaker);
             break;
         case 'message':
             hideTypingIndicator();
-            addMessage(data.speaker, data.text);
+            addMessage(data.speaker, data.text, data.is_bounce);
+            if (data.turn) {
+                turnCount.textContent = data.turn;
+            }
             break;
-        case 'session_end':
-            handleSessionEnd(data);
+        case 'dashboard_update':
+            updateDashboard(data);
+            break;
+        case 'call_end':
+            handleCallEnd(data);
             break;
     }
 }
 
-// Session start
-function handleSessionStart(data) {
-    sessionCount = data.session_id;
-    sessionCountEl.textContent = sessionCount;
-
-    // Update stats if provided
-    if (data.stats) {
-        updateStats(data.stats);
-    }
-
-    // Clear welcome message if first session
+// Handle call start
+function handleCallStart(data) {
+    // Clear welcome message
     const welcome = chatMessages.querySelector('.welcome-message');
     if (welcome) {
         welcome.remove();
     }
 
-    // Add session divider
+    // Reset turn counter
+    turnCount.textContent = '0';
+
+    // Update agent badge
+    const agent = data.agent;
+    const agentInfo = data.agent_info;
+    agentIcon.textContent = AGENT_ICONS[agent.style] || '?';
+    agentIcon.className = `agent-icon ${agent.style}`;
+    agentName.textContent = agent.name;
+    agentStyle.textContent = agentInfo.display_name;
+
+    // Reset dashboard
+    resetDashboard();
+
+    // Add call divider
     const divider = document.createElement('div');
-    divider.className = 'session-divider';
-    divider.innerHTML = `<span>Session ${sessionCount}</span>`;
+    divider.className = 'call-divider';
+    divider.innerHTML = `
+        <span>Call #${data.call_id}</span>
+        <span class="agent-tag ${agent.style}">${agentInfo.display_name}</span>
+        ${data.warmup_mode ? '<span class="warmup-tag">WARMUP</span>' : ''}
+    `;
     chatMessages.appendChild(divider);
 
     scrollToBottom();
 }
 
 // Add a message bubble
-function addMessage(speaker, text) {
+function addMessage(speaker, text, isBounce = false) {
     const message = document.createElement('div');
-    message.className = `message ${speaker}`;
+    message.className = `message ${speaker}${isBounce ? ' bounce' : ''}`;
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.textContent = speaker === 'android' ? '🤖' : '📱';
+    avatar.textContent = speaker === 'agent' ? 'A' : 'C';
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
@@ -103,7 +168,7 @@ function addMessage(speaker, text) {
 
 // Show typing indicator
 function showTypingIndicator(speaker) {
-    hideTypingIndicator(); // Remove any existing indicator
+    hideTypingIndicator();
 
     const indicator = document.createElement('div');
     indicator.className = `typing-indicator ${speaker}`;
@@ -111,7 +176,7 @@ function showTypingIndicator(speaker) {
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.textContent = speaker === 'android' ? '🤖' : '📱';
+    avatar.textContent = speaker === 'agent' ? 'A' : 'C';
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
@@ -136,41 +201,187 @@ function hideTypingIndicator() {
     }
 }
 
-// Handle session end
-function handleSessionEnd(data) {
-    // Update stats
-    if (data.stats) {
-        updateStats(data.stats);
+// Update dashboard with real-time data
+function updateDashboard(data) {
+    const { confidence, sentiment, frustration, turn } = data;
+
+    // Update turn count
+    if (turn) {
+        turnCount.textContent = turn;
     }
 
-    // Add outcome card
+    // Update fraud risk
+    const fraudRisk = confidence.fraud_likelihood || 5;
+    fraudRiskBar.style.width = `${fraudRisk * 10}%`;
+    fraudRiskValue.textContent = `${fraudRisk}/10`;
+    fraudRiskBar.className = `metric-fill fraud-fill ${fraudRisk >= 7 ? 'high' : fraudRisk >= 4 ? 'medium' : 'low'}`;
+
+    // Update motivation guess
+    const motivation = confidence.motivation_guess || { head: 33, heart: 34, hand: 33 };
+    headBar.style.width = `${motivation.head}%`;
+    headValue.textContent = `${motivation.head}%`;
+    heartBar.style.width = `${motivation.heart}%`;
+    heartValue.textContent = `${motivation.heart}%`;
+    handBar.style.width = `${motivation.hand}%`;
+    handValue.textContent = `${motivation.hand}%`;
+
+    // Highlight dominant motivation
+    const dominant = getDominantMotivation(motivation);
+    document.querySelectorAll('.motivation-item').forEach(item => {
+        item.classList.remove('dominant');
+    });
+    document.querySelector(`.motivation-item:has(.${dominant}-fill)`)?.classList.add('dominant');
+
+    // Update reasoning
+    reasoningText.textContent = confidence.reasoning || 'Analyzing...';
+
+    // Update sentiment metrics
+    updateSentimentBar('satisfaction', sentiment.satisfaction);
+    updateSentimentBar('trust', sentiment.trust);
+    updateSentimentBar('urgency', sentiment.urgency);
+    updateSentimentBar('frustration', sentiment.frustration);
+    updateSentimentBar('likelihood', sentiment.likelihood_to_convert);
+
+    // Update tone
+    toneValue.textContent = sentiment.emotional_tone || 'neutral';
+    toneValue.className = `tone-value ${getToneClass(sentiment.emotional_tone)}`;
+
+    // Show frustration warning if needed
+    const effectiveFrustration = Math.max(frustration || 0, sentiment.frustration || 0);
+    if (effectiveFrustration >= 6) {
+        frustrationWarning.style.display = 'flex';
+        frustrationWarning.className = `frustration-warning ${effectiveFrustration >= 8 ? 'critical' : 'warning'}`;
+    } else {
+        frustrationWarning.style.display = 'none';
+    }
+}
+
+function updateSentimentBar(metric, value) {
+    const bar = document.getElementById(`${metric}-bar`);
+    const valueEl = document.getElementById(`${metric}-value`);
+    if (bar && valueEl) {
+        bar.style.width = `${value * 10}%`;
+        valueEl.textContent = value;
+
+        // Color coding
+        if (metric === 'frustration') {
+            bar.className = `sentiment-fill frustration-fill ${value >= 7 ? 'high' : value >= 4 ? 'medium' : 'low'}`;
+        } else {
+            bar.className = `sentiment-fill ${metric}-fill ${value >= 7 ? 'high' : value >= 4 ? 'medium' : 'low'}`;
+        }
+    }
+}
+
+function getDominantMotivation(motivation) {
+    const { head, heart, hand } = motivation;
+    if (head >= heart && head >= hand) return 'head';
+    if (heart >= head && heart >= hand) return 'heart';
+    return 'hand';
+}
+
+function getToneClass(tone) {
+    const positive = ['happy', 'interested', 'curious', 'engaged', 'warm', 'friendly'];
+    const negative = ['frustrated', 'annoyed', 'skeptical', 'impatient', 'hostile', 'angry'];
+    if (positive.includes(tone?.toLowerCase())) return 'positive';
+    if (negative.includes(tone?.toLowerCase())) return 'negative';
+    return 'neutral';
+}
+
+// Reset dashboard to initial state
+function resetDashboard() {
+    fraudRiskBar.style.width = '30%';
+    fraudRiskValue.textContent = '3/10';
+    headBar.style.width = '33%';
+    headValue.textContent = '33%';
+    heartBar.style.width = '33%';
+    heartValue.textContent = '33%';
+    handBar.style.width = '33%';
+    handValue.textContent = '33%';
+    reasoningText.textContent = 'Analyzing caller...';
+
+    satisfactionBar.style.width = '50%';
+    satisfactionValue.textContent = '5';
+    trustBar.style.width = '50%';
+    trustValue.textContent = '5';
+    urgencyBar.style.width = '50%';
+    urgencyValue.textContent = '5';
+    frustrationBar.style.width = '30%';
+    frustrationValue.textContent = '3';
+    likelihoodBar.style.width = '50%';
+    likelihoodValue.textContent = '5';
+    toneValue.textContent = 'neutral';
+    toneValue.className = 'tone-value neutral';
+
+    frustrationWarning.style.display = 'none';
+}
+
+// Handle call end
+function handleCallEnd(data) {
+    // Update stats
+    if (data.overall_stats) {
+        updateStats(data.overall_stats);
+    }
+
+    // Create outcome card
     const card = document.createElement('div');
     card.className = `outcome-card ${data.outcome}`;
 
-    const outcomeText = {
-        'converted': '✅ Converted to Android!',
-        'stayed': '📱 Staying with iPhone',
-        'maybe': '🤔 Maybe Later'
+    const outcomeEmoji = {
+        'conversion': '+',
+        'missed_opp': '-',
+        'fraud_caught': '!',
+        'fraud_missed': 'X'
     };
 
-    const profile = data.actual_profile;
-    const predictionClass = data.prediction_correct ? 'correct' : 'incorrect';
-    const predictionText = data.prediction_correct ? 'Correct!' : 'Wrong';
-    const pitchMatched = data.pitch_used === profile.primary_loyalty;
-    const pitchClass = pitchMatched ? 'correct' : 'incorrect';
-    const pitchMatchText = pitchMatched ? 'Matched!' : 'Mismatched';
+    const customer = data.customer;
+    const pointsClass = data.points >= 0 ? 'positive' : 'negative';
 
     card.innerHTML = `
-        <h3>${outcomeText[data.outcome]}</h3>
+        <div class="outcome-header">
+            <span class="outcome-emoji">${outcomeEmoji[data.outcome] || '?'}</span>
+            <span class="outcome-title">${data.outcome_description}</span>
+            <span class="outcome-points ${pointsClass}">${data.points >= 0 ? '+' : ''}${data.points} pts</span>
+        </div>
         <div class="outcome-details">
-            <div><span class="label">Actual Loyalty:</span> ${profile.primary_loyalty}</div>
-            <div><span class="label">Openness:</span> ${profile.openness_to_switch}</div>
-            <div><span class="label">Disclosure:</span> ${profile.disclosure_style}</div>
-            <div><span class="label">Prediction:</span> ${data.advocate_prediction || 'N/A'}
-                <span class="prediction-badge ${predictionClass}">${predictionText}</span>
+            <div class="detail-section">
+                <h4>Customer Profile (Hidden)</h4>
+                <div class="detail-grid">
+                    <span class="label">Name:</span><span>${customer.name}</span>
+                    <span class="label">Tier:</span><span>${data.customer_tier_display}</span>
+                    <span class="label">Motivation:</span><span class="motivation-badge ${customer.motivation}">${customer.motivation.toUpperCase()}</span>
+                    <span class="label">Fraud:</span><span class="fraud-badge ${customer.is_fraud ? 'yes' : 'no'}">${customer.is_fraud ? 'YES' : 'No'}</span>
+                </div>
             </div>
-            <div><span class="label">Pitch Used:</span> ${data.pitch_used || 'N/A'}
-                <span class="prediction-badge ${pitchClass}">${pitchMatchText}</span>
+            <div class="detail-section">
+                <h4>Agent Performance</h4>
+                <div class="detail-grid">
+                    <span class="label">Motivation Guess:</span>
+                    <span>
+                        ${data.agent_motivation_guess ? data.agent_motivation_guess.toUpperCase() : 'N/A'}
+                        <span class="guess-badge ${data.motivation_correct ? 'correct' : 'incorrect'}">
+                            ${data.motivation_correct ? 'Correct!' : 'Wrong'}
+                        </span>
+                    </span>
+                    <span class="label">Action:</span>
+                    <span>${data.close_attempted ? 'Closed' : data.flag_used ? 'Flagged' : data.customer_bounced ? 'Customer Left' : 'Timed Out'}</span>
+                    <span class="label">Turns:</span><span>${data.turns_used}/14</span>
+                </div>
+            </div>
+            ${data.close_pitch ? `
+            <div class="detail-section">
+                <h4>Close Pitch</h4>
+                <p class="pitch-text">"${data.close_pitch}"</p>
+            </div>
+            ` : ''}
+            ${data.flag_reason ? `
+            <div class="detail-section">
+                <h4>Flag Reason</h4>
+                <p class="flag-text">"${data.flag_reason}"</p>
+            </div>
+            ` : ''}
+            <div class="detail-section">
+                <h4>New Learning</h4>
+                <p class="learning-text">${data.new_pattern}</p>
             </div>
         </div>
     `;
@@ -184,9 +395,110 @@ function handleSessionEnd(data) {
 
 // Update stats display
 function updateStats(stats) {
-    convertedCountEl.textContent = stats.converted;
-    stayedCountEl.textContent = stats.stayed;
-    maybeCountEl.textContent = stats.maybe;
+    callCount.textContent = stats.total_calls || 0;
+    totalPoints.textContent = stats.total_points || 0;
+    convertedCount.textContent = stats.conversions || 0;
+    fraudCaughtCount.textContent = stats.frauds_caught || 0;
+}
+
+// Load initial stats
+async function loadInitialStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+        updateStats(stats);
+    } catch (error) {
+        console.error('Failed to load stats:', error);
+    }
+}
+
+// Load warmup status
+async function loadWarmupStatus() {
+    try {
+        const response = await fetch('/api/warmup');
+        const data = await response.json();
+        warmupMode = data.warmup_mode;
+        updateWarmupButton();
+    } catch (error) {
+        console.error('Failed to load warmup status:', error);
+    }
+}
+
+// Toggle warmup mode
+async function toggleWarmup() {
+    try {
+        const response = await fetch('/api/warmup', { method: 'POST' });
+        const data = await response.json();
+        warmupMode = data.warmup_mode;
+        updateWarmupButton();
+    } catch (error) {
+        console.error('Failed to toggle warmup:', error);
+    }
+}
+
+function updateWarmupButton() {
+    warmupButton.textContent = `Warmup Mode: ${warmupMode ? 'ON' : 'OFF'}`;
+    warmupButton.className = `warmup-button ${warmupMode ? 'active' : ''}`;
+}
+
+// Start new call
+function startNewCall() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        startButton.disabled = true;
+        ws.send(JSON.stringify({ type: 'new_call' }));
+    }
+}
+
+// Show leaderboard
+async function showLeaderboard() {
+    leaderboardModal.classList.add('active');
+    leaderboardContent.innerHTML = 'Loading...';
+
+    try {
+        const response = await fetch('/api/leaderboard');
+        const data = await response.json();
+        renderLeaderboard(data);
+    } catch (error) {
+        leaderboardContent.innerHTML = '<p class="error">Failed to load leaderboard</p>';
+    }
+}
+
+function renderLeaderboard(data) {
+    if (!data || data.length === 0) {
+        leaderboardContent.innerHTML = '<p class="no-data">No calls completed yet. Start some calls to see agent performance!</p>';
+        return;
+    }
+
+    let html = '<div class="leaderboard-list">';
+
+    data.forEach((agent, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+
+        html += `
+            <div class="leaderboard-item ${agent.style}">
+                <div class="rank ${rankClass}">#${rank}</div>
+                <div class="agent-info">
+                    <span class="agent-style-name">${agent.display_name || agent.style}</span>
+                    <span class="agent-stats">
+                        ${agent.total_calls} calls |
+                        ${agent.conversion_rate}% conv |
+                        ${agent.frauds_caught} fraud caught
+                    </span>
+                </div>
+                <div class="agent-points ${agent.total_points >= 0 ? 'positive' : 'negative'}">
+                    ${agent.total_points >= 0 ? '+' : ''}${agent.total_points}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    leaderboardContent.innerHTML = html;
+}
+
+function hideLeaderboard() {
+    leaderboardModal.classList.remove('active');
 }
 
 // Scroll chat to bottom
@@ -194,148 +506,13 @@ function scrollToBottom() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Start new session
-function startNewSession() {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        startButton.disabled = true;
-        ws.send(JSON.stringify({ type: 'new_session' }));
-    }
-}
-
-// Insights modal
-const insightsButton = document.getElementById('insights-button');
-const insightsModal = document.getElementById('insights-modal');
-const modalClose = document.getElementById('modal-close');
-const insightsContent = document.getElementById('insights-content');
-
-async function showInsights() {
-    insightsModal.classList.add('active');
-    insightsContent.innerHTML = 'Loading...';
-
-    try {
-        const response = await fetch('/api/insights');
-        const data = await response.json();
-        renderInsights(data);
-    } catch (error) {
-        insightsContent.innerHTML = '<p class="no-data">Error loading insights</p>';
-    }
-}
-
-function renderInsights(data) {
-    if (!data.total_sessions) {
-        insightsContent.innerHTML = '<p class="no-data">No sessions yet. Run some conversations first!</p>';
-        return;
-    }
-
-    let html = '';
-
-    // Overview stats
-    html += `
-        <div class="insights-section">
-            <h3>Overview</h3>
-            <div class="insights-grid">
-                <div class="insight-card">
-                    <div class="label">Total Sessions</div>
-                    <div class="value neutral">${data.total_sessions}</div>
-                </div>
-                <div class="insight-card">
-                    <div class="label">Conversion Rate</div>
-                    <div class="value ${data.overall_conversion_rate >= 50 ? 'good' : 'bad'}">${data.overall_conversion_rate}%</div>
-                </div>
-                <div class="insight-card">
-                    <div class="label">Prediction Accuracy</div>
-                    <div class="value ${data.prediction_accuracy >= 50 ? 'good' : 'bad'}">${data.prediction_accuracy}%</div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // By loyalty type
-    if (data.by_loyalty && Object.keys(data.by_loyalty).length > 0) {
-        html += `
-            <div class="insights-section">
-                <h3>Conversion by Loyalty Type</h3>
-                <div class="insights-grid">
-        `;
-        for (const [type, stats] of Object.entries(data.by_loyalty)) {
-            const rateClass = stats.rate >= 50 ? 'good' : (stats.rate >= 25 ? 'neutral' : 'bad');
-            html += `
-                <div class="insight-card">
-                    <div class="label">${type.toUpperCase()}</div>
-                    <div class="value ${rateClass}">${stats.rate}%</div>
-                    <div class="label">${stats.converted}/${stats.count}</div>
-                </div>
-            `;
-        }
-        html += '</div></div>';
-    }
-
-    // Pitch effectiveness
-    if (data.pitch_effectiveness && Object.keys(data.pitch_effectiveness).length > 0) {
-        html += `
-            <div class="insights-section">
-                <h3>Pitch Matching Effectiveness</h3>
-                <div class="insights-grid">
-        `;
-        if (data.pitch_effectiveness.matched) {
-            const m = data.pitch_effectiveness.matched;
-            html += `
-                <div class="insight-card">
-                    <div class="label">Matched Pitch</div>
-                    <div class="value ${m.rate >= 50 ? 'good' : 'bad'}">${m.rate}%</div>
-                    <div class="label">${m.converted}/${m.count}</div>
-                </div>
-            `;
-        }
-        if (data.pitch_effectiveness.mismatched) {
-            const m = data.pitch_effectiveness.mismatched;
-            html += `
-                <div class="insight-card">
-                    <div class="label">Mismatched Pitch</div>
-                    <div class="value ${m.rate >= 50 ? 'good' : 'bad'}">${m.rate}%</div>
-                    <div class="label">${m.converted}/${m.count}</div>
-                </div>
-            `;
-        }
-        html += '</div></div>';
-    }
-
-    // Key learnings
-    if (data.key_learnings && data.key_learnings.length > 0) {
-        html += `
-            <div class="insights-section">
-                <h3>Key Learnings</h3>
-                <ul class="key-learnings">
-        `;
-        for (const learning of data.key_learnings) {
-            html += `<li>${learning}</li>`;
-        }
-        html += '</ul></div>';
-    }
-
-    // Memory summary (what the agent sees)
-    if (data.memory_summary) {
-        html += `
-            <div class="insights-section">
-                <h3>What The Agent Sees</h3>
-                <div class="memory-summary">${data.memory_summary}</div>
-            </div>
-        `;
-    }
-
-    insightsContent.innerHTML = html;
-}
-
-function hideInsights() {
-    insightsModal.classList.remove('active');
-}
-
 // Event listeners
-startButton.addEventListener('click', startNewSession);
-insightsButton.addEventListener('click', showInsights);
-modalClose.addEventListener('click', hideInsights);
-insightsModal.addEventListener('click', (e) => {
-    if (e.target === insightsModal) hideInsights();
+startButton.addEventListener('click', startNewCall);
+warmupButton.addEventListener('click', toggleWarmup);
+leaderboardButton.addEventListener('click', showLeaderboard);
+modalClose.addEventListener('click', hideLeaderboard);
+leaderboardModal.addEventListener('click', (e) => {
+    if (e.target === leaderboardModal) hideLeaderboard();
 });
 
 // Initialize

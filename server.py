@@ -1,9 +1,7 @@
-"""FastAPI server with WebSocket handler for Android vs iPhone conversation simulator."""
+"""FastAPI server for Android Converter Simulator."""
 
 import asyncio
-import json
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -13,113 +11,65 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 import anthropic
 
+from personas import Customer, generate_customer, build_customer_prompt
 from agents import (
-    generate_random_profile,
-    build_iphone_user_prompt,
-    build_android_advocate_prompt,
-    build_memory_summary,
-    analyze_learning_insights,
-    iPhoneUserProfile
+    Agent,
+    generate_agent,
+    build_agent_prompt,
+    get_post_call_learning_prompt,
+    get_archetype_info
 )
+from game import (
+    CallState,
+    check_close_attempt,
+    check_flag_attempt,
+    strip_action_tags,
+    assess_motivation_alignment,
+    calculate_frustration_increase,
+    check_customer_bounce,
+    will_convert,
+    MAX_TURNS
+)
+from scoring import (
+    determine_outcome,
+    calculate_score,
+    get_outcome_description,
+    get_tier_display
+)
+from storage import (
+    load_agent_state,
+    save_agent_state,
+    add_pattern,
+    update_agent_stats,
+    log_call,
+    load_call_history,
+    get_leaderboard,
+    get_overall_stats,
+    ensure_directories
+)
+from dashboard import (
+    get_agent_confidence,
+    get_customer_sentiment,
+    generate_learning,
+    get_dominant_motivation
+)
+
 
 load_dotenv()
 
 app = FastAPI()
 
 # Ensure directories exist
+ensure_directories()
 Path("images").mkdir(exist_ok=True)
-Path("results").mkdir(exist_ok=True)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # Global state
-session_history: list[dict] = []
-session_counter = 0
-stats = {"converted": 0, "stayed": 0, "maybe": 0}
-
-# Load existing session history if available
-RESULTS_FILE = Path("results/session_logs.json")
-if RESULTS_FILE.exists():
-    try:
-        with open(RESULTS_FILE) as f:
-            session_history = json.load(f)
-            session_counter = len(session_history)
-            for s in session_history:
-                outcome = s.get("outcome", "stayed")
-                if outcome in stats:
-                    stats[outcome] += 1
-    except json.JSONDecodeError:
-        pass
-
-
-def save_session(session_data: dict):
-    """Save session to JSON file."""
-    RESULTS_FILE.parent.mkdir(exist_ok=True)
-    with open(RESULTS_FILE, "w") as f:
-        json.dump(session_history, f, indent=2)
-
-
-def parse_advocate_summary(text: str) -> dict:
-    """Parse the advocate's summary block from their final message."""
-    result = {"predicted_loyalty": None, "pitch_angle_used": None}
-
-    match = re.search(r'\[ADVOCATE_SUMMARY\](.*?)\[/ADVOCATE_SUMMARY\]', text, re.DOTALL)
-    if match:
-        summary_text = match.group(1)
-
-        loyalty_match = re.search(r'predicted_loyalty:\s*(head|heart|hands)', summary_text)
-        if loyalty_match:
-            result["predicted_loyalty"] = loyalty_match.group(1)
-
-        pitch_match = re.search(r'pitch_angle_used:\s*(head|heart|hands)', summary_text)
-        if pitch_match:
-            result["pitch_angle_used"] = pitch_match.group(1)
-
-    return result
-
-
-def determine_outcome(text: str) -> str:
-    """Determine conversation outcome from iPhone user's final message."""
-    text_lower = text.lower().strip()
-
-    # Check for explicit Yes/No format first (new format)
-    if text_lower.startswith("yes"):
-        return "converted"
-    if text_lower.startswith("no, not today") or text_lower.startswith("no. not today"):
-        return "maybe"
-    if text_lower.startswith("no"):
-        return "stayed"
-
-    # Fallback to phrase matching for older format responses
-    converted_phrases = [
-        "i'll give it a shot", "i'll check out android", "you've convinced me",
-        "maybe i'll try", "i'm interested", "sign me up", "you got me",
-        "i'll consider switching", "let's do it", "i'm in", "i'm sold",
-        "i'm pretty sold", "make the jump", "make the switch", "gonna look into",
-        "going to look into", "i'll try", "convinced me", "swing by a store",
-        "walk out with a new", "getting excited", "count me in", "i'll switch"
-    ]
-
-    staying_phrases = [
-        "i'm good with", "sticking with", "staying with", "i'll pass",
-        "not for me", "i'm happy with my iphone", "no thanks", "nah",
-        "not switching", "not interested", "i'll stick with", "i'm staying"
-    ]
-
-    for phrase in converted_phrases:
-        if phrase in text_lower:
-            return "converted"
-
-    for phrase in staying_phrases:
-        if phrase in text_lower:
-            return "stayed"
-
-    if "think about it" in text_lower or "maybe" in text_lower:
-        return "maybe"
-
-    return "stayed"  # Default
+warmup_mode = False
+call_counter = 0
 
 
 @app.get("/")
@@ -127,12 +77,38 @@ async def root():
     return FileResponse("static/index.html")
 
 
-@app.get("/api/insights")
-async def get_insights():
-    """Get the current learning insights from all sessions."""
-    insights = analyze_learning_insights(session_history)
-    insights["memory_summary"] = build_memory_summary(session_history)
-    return insights
+@app.get("/api/stats")
+async def get_stats():
+    """Get overall statistics."""
+    return get_overall_stats()
+
+
+@app.get("/api/leaderboard")
+async def get_agent_leaderboard():
+    """Get agent archetype leaderboard."""
+    return get_leaderboard()
+
+
+@app.get("/api/agent/{style}/stats")
+async def get_agent_stats(style: str):
+    """Get stats for a specific agent archetype."""
+    state = load_agent_state(style)
+    info = get_archetype_info(style)
+    return {**state, **info}
+
+
+@app.post("/api/warmup")
+async def toggle_warmup():
+    """Toggle warmup mode (5% fraud vs 15%)."""
+    global warmup_mode
+    warmup_mode = not warmup_mode
+    return {"warmup_mode": warmup_mode}
+
+
+@app.get("/api/warmup")
+async def get_warmup_status():
+    """Get current warmup mode status."""
+    return {"warmup_mode": warmup_mode}
 
 
 @app.websocket("/ws")
@@ -144,182 +120,297 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
 
-            if data.get("type") == "new_session":
-                await run_conversation(websocket, client)
+            if data.get("type") == "new_call":
+                await run_call(websocket, client)
 
     except WebSocketDisconnect:
         print("Client disconnected")
 
 
-async def run_conversation(websocket: WebSocket, client: anthropic.Anthropic):
-    """Run a full conversation between the two agents."""
-    global session_counter, stats
+async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
+    """Run a complete customer service call."""
+    global call_counter
 
-    session_counter += 1
-    session_id = session_counter
+    call_counter += 1
+    call_id = call_counter
 
-    # Generate random profile for iPhone user
-    profile = generate_random_profile()
+    # Generate customer and agent
+    customer = generate_customer(warmup_mode)
+    agent = generate_agent()
 
-    # Send session start
+    # Load agent's learned patterns
+    agent_state = load_agent_state(agent.style)
+    patterns = agent_state.get("patterns_noted", [])
+
+    # Initialize call state
+    state = CallState(customer=customer, agent=agent)
+
+    # Build prompts
+    customer_prompt = build_customer_prompt(customer)
+
+    # Send call start info
     await websocket.send_json({
-        "type": "session_start",
-        "session_id": session_id,
-        "stats": stats
+        "type": "call_start",
+        "call_id": call_id,
+        "agent": agent.to_dict(),
+        "agent_info": get_archetype_info(agent.style),
+        "warmup_mode": warmup_mode
     })
 
-    # Build system prompts
-    iphone_system = build_iphone_user_prompt(profile)
-    memory_summary = build_memory_summary(session_history)
+    # Conversation history for each participant
+    agent_messages = []
+    customer_messages = []
 
-    # Conversation state
-    android_messages = []
-    iphone_messages = []
-    transcript = []
+    # Main conversation loop
+    while state.turn < MAX_TURNS:
+        state.turn += 1
 
-    # Android advocate starts
-    max_turns = 10  # Safety limit
-    turn = 0
-    conversation_ended = False
-    advocate_summary = {}
+        # Build agent prompt with current turn
+        agent_prompt = build_agent_prompt(agent, patterns, state.turn)
 
-    while turn < max_turns and not conversation_ended:
-        turn += 1
+        # Agent's turn
+        await websocket.send_json({"type": "typing", "speaker": "agent"})
+        await asyncio.sleep(0.3)
 
-        # Build android system prompt with turn count for close triggering
-        android_system = build_android_advocate_prompt(memory_summary, turn_count=turn)
-
-        # Android advocate's turn
-        await websocket.send_json({"type": "typing", "speaker": "android"})
-        await asyncio.sleep(0.5)  # Brief delay for realism
-
-        # Adjust prompt based on turn count
-        if turn == 1:
-            user_prompt = "Start the conversation with your professional introduction."
-        elif iphone_messages:
-            user_prompt = iphone_messages[-1]["content"]
+        # Determine user prompt for agent
+        if state.turn == 1:
+            user_content = f"A customer is calling. They said: \"{customer.call_reason}\""
         else:
-            user_prompt = "Continue the conversation."
+            user_content = customer_messages[-1]["content"]
 
-        android_response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=400,
-            system=android_system,
-            messages=android_messages + [{"role": "user", "content": user_prompt}]
+        agent_response = client.messages.create(
+            model="claude-haiku-4-20250414",
+            max_tokens=300,
+            system=agent_prompt,
+            messages=agent_messages + [{"role": "user", "content": user_content}]
         )
 
-        android_text = android_response.content[0].text
+        agent_text = agent_response.content[0].text
 
-        # Check for summary block (conversation ending)
-        if "[ADVOCATE_SUMMARY]" in android_text:
-            advocate_summary = parse_advocate_summary(android_text)
-            # Remove summary block from displayed text
-            android_text_display = re.sub(r'\[ADVOCATE_SUMMARY\].*?\[/ADVOCATE_SUMMARY\]', '', android_text, flags=re.DOTALL).strip()
-            conversation_ended = True
-        else:
-            android_text_display = android_text
+        # Check for close or flag
+        close_attempted, close_pitch = check_close_attempt(agent_text)
+        flag_used, flag_reason = check_flag_attempt(agent_text)
 
-        android_messages.append({"role": "assistant", "content": android_text})
-        transcript.append({"speaker": "android", "text": android_text_display})
+        if close_attempted:
+            state.close_attempted = True
+            state.close_pitch = close_pitch
 
-        await websocket.send_json({
-            "type": "message",
-            "speaker": "android",
-            "text": android_text_display
+        if flag_used:
+            state.flag_used = True
+            state.flag_reason = flag_reason
+
+        # Clean text for display
+        display_text = strip_action_tags(agent_text)
+
+        # Record in transcript
+        state.transcript.append({
+            "speaker": "agent",
+            "text": display_text,
+            "turn": state.turn
         })
 
-        if conversation_ended:
+        agent_messages.append({"role": "assistant", "content": agent_text})
+
+        # Send agent message
+        await websocket.send_json({
+            "type": "message",
+            "speaker": "agent",
+            "text": display_text,
+            "turn": state.turn
+        })
+
+        # If agent closed or flagged, end call
+        if close_attempted or flag_used:
             break
 
-        # iPhone user's turn
-        await asyncio.sleep(0.8)  # Pause between speakers
-        await websocket.send_json({"type": "typing", "speaker": "iphone"})
+        # Customer's turn
         await asyncio.sleep(0.5)
+        await websocket.send_json({"type": "typing", "speaker": "customer"})
+        await asyncio.sleep(0.3)
 
-        iphone_response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            system=iphone_system,
-            messages=iphone_messages + [{"role": "user", "content": android_text}]
+        customer_response = client.messages.create(
+            model="claude-haiku-4-20250414",
+            max_tokens=200,
+            system=customer_prompt,
+            messages=customer_messages + [{"role": "user", "content": agent_text}]
         )
 
-        iphone_text = iphone_response.content[0].text
-        iphone_messages.append({"role": "assistant", "content": iphone_text})
-        transcript.append({"speaker": "iphone", "text": iphone_text})
+        customer_text = customer_response.content[0].text
 
-        await websocket.send_json({
-            "type": "message",
-            "speaker": "iphone",
-            "text": iphone_text
+        # Record in transcript
+        state.transcript.append({
+            "speaker": "customer",
+            "text": customer_text,
+            "turn": state.turn
         })
 
-        # Update message history for next turn
-        android_messages.append({"role": "user", "content": iphone_text})
+        customer_messages.append({"role": "assistant", "content": customer_text})
+        agent_messages.append({"role": "user", "content": customer_text})
 
-        # Check if iPhone user made a final decision
-        outcome = determine_outcome(iphone_text)
-        if any(phrase in iphone_text.lower() for phrase in [
-            "i'll give it", "you've convinced", "i'm good with", "sticking with",
-            "staying with", "i'll pass", "not for me", "think about it", "maybe someday"
-        ]):
-            # One more turn for advocate to wrap up
-            await asyncio.sleep(0.8)
-            await websocket.send_json({"type": "typing", "speaker": "android"})
-            await asyncio.sleep(0.5)
+        # Send customer message
+        await websocket.send_json({
+            "type": "message",
+            "speaker": "customer",
+            "text": customer_text,
+            "turn": state.turn
+        })
 
-            final_response = client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=300,
-                system=android_system,
-                messages=android_messages + [{"role": "user", "content": f"{iphone_text}\n\n(The conversation is ending. Respond gracefully and include your [ADVOCATE_SUMMARY] block.)"}]
-            )
+        # Run dashboard analysis in parallel
+        confidence_task = asyncio.create_task(
+            get_agent_confidence(client, display_text, customer_text)
+        )
+        sentiment_task = asyncio.create_task(
+            get_customer_sentiment(client, display_text, customer_text)
+        )
 
-            final_text = final_response.content[0].text
-            advocate_summary = parse_advocate_summary(final_text)
-            final_text_display = re.sub(r'\[ADVOCATE_SUMMARY\].*?\[/ADVOCATE_SUMMARY\]', '', final_text, flags=re.DOTALL).strip()
+        confidence = await confidence_task
+        sentiment = await sentiment_task
 
-            transcript.append({"speaker": "android", "text": final_text_display})
-            await websocket.send_json({
-                "type": "message",
-                "speaker": "android",
-                "text": final_text_display
+        # Update state sentiment
+        state.sentiment = sentiment
+
+        # Calculate and update frustration
+        alignment = assess_motivation_alignment(agent_text, customer.motivation)
+        frustration_increase = calculate_frustration_increase(
+            agent_text, customer.motivation, alignment
+        )
+        state.frustration = min(state.frustration + frustration_increase, 10.0)
+
+        # Send dashboard update
+        await websocket.send_json({
+            "type": "dashboard_update",
+            "turn": state.turn,
+            "confidence": confidence,
+            "sentiment": sentiment,
+            "frustration": state.frustration,
+            "alignment": alignment
+        })
+
+        # Check for customer bounce
+        if check_customer_bounce(state):
+            state.customer_bounced = True
+
+            # Send bounce message
+            bounce_msg = get_bounce_message(customer.motivation)
+            state.transcript.append({
+                "speaker": "customer",
+                "text": bounce_msg,
+                "turn": state.turn
             })
 
-            conversation_ended = True
+            await websocket.send_json({
+                "type": "message",
+                "speaker": "customer",
+                "text": bounce_msg,
+                "turn": state.turn,
+                "is_bounce": True
+            })
+            break
 
-    # Determine final outcome from last iPhone message
-    last_iphone_msg = next((t["text"] for t in reversed(transcript) if t["speaker"] == "iphone"), "")
-    outcome = determine_outcome(last_iphone_msg)
+    # Determine outcome
+    converted = False
+    if state.close_attempted and not customer.is_fraud:
+        # Check if they would convert
+        dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
+        matched = dominant_motivation == customer.motivation
+        converted = will_convert(state.sentiment, matched, customer.is_fraud)
+        state.agent_motivation_guess = dominant_motivation
 
-    # Update stats
-    stats[outcome] += 1
+    outcome = determine_outcome(
+        close_attempted=state.close_attempted,
+        flag_used=state.flag_used,
+        is_fraud=customer.is_fraud,
+        converted=converted,
+        customer_bounced=state.customer_bounced
+    )
 
-    # Build session record
-    session_data = {
-        "session_id": session_id,
-        "timestamp": datetime.now().isoformat(),
-        "iphone_user_profile": profile.to_dict(),
-        "advocate_predicted_loyalty": advocate_summary.get("predicted_loyalty"),
-        "pitch_angle_used": advocate_summary.get("pitch_angle_used"),
-        "prediction_correct": advocate_summary.get("predicted_loyalty") == profile.primary_loyalty,
+    # Calculate score
+    motivation_correct = state.agent_motivation_guess == customer.motivation
+    points = calculate_score(customer.tier, outcome, motivation_correct)
+
+    # Generate learning
+    learning_prompt = get_post_call_learning_prompt(
+        agent=agent,
+        customer_tier=customer.tier,
+        customer_motivation=customer.motivation,
+        was_fraud=customer.is_fraud,
+        outcome=outcome
+    )
+    new_pattern = await generate_learning(client, learning_prompt)
+
+    # Save pattern to agent state
+    add_pattern(agent.style, new_pattern)
+
+    # Update agent stats
+    call_summary = {
+        "call_id": call_id,
+        "customer_tier": customer.tier,
+        "customer_motivation": customer.motivation,
+        "was_fraud": customer.is_fraud,
         "outcome": outcome,
-        "conversation_turns": len(transcript),
-        "full_transcript": transcript
+        "points": points,
+        "turns": state.turn
     }
+    update_agent_stats(agent.style, outcome, points, call_summary)
 
-    session_history.append(session_data)
-    save_session(session_data)
-
-    # Send session end
-    await websocket.send_json({
-        "type": "session_end",
+    # Log full call
+    call_record = {
+        "call_id": str(call_id),
+        "timestamp": datetime.now().isoformat(),
+        "customer": customer.to_dict(),
+        "agent": agent.to_dict(),
+        "turns_used": state.turn,
+        "close_attempted": state.close_attempted,
+        "close_pitch": state.close_pitch,
+        "flag_used": state.flag_used,
+        "flag_reason": state.flag_reason,
+        "customer_bounced": state.customer_bounced,
         "outcome": outcome,
-        "actual_profile": profile.to_dict(),
-        "advocate_prediction": advocate_summary.get("predicted_loyalty"),
-        "prediction_correct": advocate_summary.get("predicted_loyalty") == profile.primary_loyalty,
-        "pitch_used": advocate_summary.get("pitch_angle_used"),
-        "stats": stats
+        "converted": converted,
+        "agent_motivation_guess": state.agent_motivation_guess,
+        "motivation_correct": motivation_correct,
+        "points": points,
+        "new_pattern": new_pattern,
+        "final_sentiment": state.sentiment,
+        "final_frustration": state.frustration,
+        "transcript": state.transcript
+    }
+    log_call(call_record)
+
+    # Send call end summary
+    await websocket.send_json({
+        "type": "call_end",
+        "call_id": call_id,
+        "outcome": outcome,
+        "outcome_description": get_outcome_description(outcome),
+        "points": points,
+        "customer": customer.to_dict(),
+        "customer_tier_display": get_tier_display(customer.tier),
+        "agent": agent.to_dict(),
+        "agent_info": get_archetype_info(agent.style),
+        "close_attempted": state.close_attempted,
+        "close_pitch": state.close_pitch,
+        "flag_used": state.flag_used,
+        "flag_reason": state.flag_reason,
+        "customer_bounced": state.customer_bounced,
+        "converted": converted,
+        "agent_motivation_guess": state.agent_motivation_guess,
+        "motivation_correct": motivation_correct,
+        "new_pattern": new_pattern,
+        "turns_used": state.turn,
+        "final_sentiment": state.sentiment,
+        "overall_stats": get_overall_stats()
     })
+
+
+def get_bounce_message(motivation: str) -> str:
+    """Get a bounce (hang-up) message based on customer motivation."""
+    messages = {
+        "head": "You know what, I don't think this is going anywhere. Thanks for your time, but I'll do my own research.",
+        "heart": "I... I don't think this is right for me. Thank you, but I need to go.",
+        "hand": "Look, I gotta go. This is taking too long. *click*"
+    }
+    return messages.get(motivation, "I have to go. Goodbye.")
 
 
 if __name__ == "__main__":
