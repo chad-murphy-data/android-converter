@@ -1,16 +1,80 @@
-"""Storage and persistence for Android Converter Simulator."""
+"""Storage and persistence for Android Converter Simulator.
+
+Uses JSONBin.io for cloud persistence (free tier).
+Falls back to local files if JSONBin is not configured.
+"""
 
 import json
+import os
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+import httpx
 
 
-# Paths
+# JSONBin.io configuration
+JSONBIN_API_KEY = os.getenv("JSONBIN_API_KEY")
+JSONBIN_CALLS_BIN_ID = os.getenv("JSONBIN_CALLS_BIN_ID")  # For call logs
+JSONBIN_AGENTS_BIN_ID = os.getenv("JSONBIN_AGENTS_BIN_ID")  # For agent states
+JSONBIN_BASE_URL = "https://api.jsonbin.io/v3/b"
+
+# Local paths (fallback)
 RESULTS_DIR = Path("results")
 AGENT_STATES_DIR = RESULTS_DIR / "agent_states"
 CALL_LOGS_FILE = RESULTS_DIR / "call_logs.json"
+
+# In-memory cache for the session
+_call_history_cache: list = []
+_agent_states_cache: dict = {}
+
+
+def _jsonbin_enabled() -> bool:
+    """Check if JSONBin is configured."""
+    return bool(JSONBIN_API_KEY and JSONBIN_CALLS_BIN_ID and JSONBIN_AGENTS_BIN_ID)
+
+
+def _jsonbin_headers() -> dict:
+    """Get headers for JSONBin API calls."""
+    return {
+        "Content-Type": "application/json",
+        "X-Master-Key": JSONBIN_API_KEY
+    }
+
+
+def _load_from_jsonbin(bin_id: str) -> Optional[dict]:
+    """Load data from a JSONBin bin."""
+    if not JSONBIN_API_KEY:
+        return None
+    try:
+        response = httpx.get(
+            f"{JSONBIN_BASE_URL}/{bin_id}/latest",
+            headers=_jsonbin_headers(),
+            timeout=10.0
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("record", {})
+    except Exception as e:
+        print(f"JSONBin load error: {e}")
+    return None
+
+
+def _save_to_jsonbin(bin_id: str, data: dict) -> bool:
+    """Save data to a JSONBin bin."""
+    if not JSONBIN_API_KEY:
+        return False
+    try:
+        response = httpx.put(
+            f"{JSONBIN_BASE_URL}/{bin_id}",
+            headers=_jsonbin_headers(),
+            json=data,
+            timeout=10.0
+        )
+        return response.status_code == 200
+    except Exception as e:
+        print(f"JSONBin save error: {e}")
+    return False
 
 
 def ensure_directories():
@@ -34,50 +98,65 @@ def get_default_agent_state(style: str) -> dict:
     }
 
 
-def load_agent_state(style: str) -> dict:
-    """Load agent state for a specific archetype.
+def _load_all_agent_states() -> dict:
+    """Load all agent states from JSONBin or cache."""
+    global _agent_states_cache
 
-    Args:
-        style: Agent archetype (closer, detective, empath, robot, gambler)
+    # Return cache if populated
+    if _agent_states_cache:
+        return _agent_states_cache
 
-    Returns:
-        Agent state dictionary
-    """
+    # Try JSONBin first
+    if _jsonbin_enabled():
+        data = _load_from_jsonbin(JSONBIN_AGENTS_BIN_ID)
+        if data:
+            _agent_states_cache = data
+            return _agent_states_cache
+
+    # Fall back to local files
     ensure_directories()
-    state_file = AGENT_STATES_DIR / f"{style}.json"
-
-    if state_file.exists():
+    for style_file in AGENT_STATES_DIR.glob("*.json"):
         try:
-            with open(state_file) as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            pass
+            with open(style_file) as f:
+                state = json.load(f)
+                _agent_states_cache[state["style"]] = state
+        except (json.JSONDecodeError, KeyError):
+            continue
 
-    return get_default_agent_state(style)
+    return _agent_states_cache
+
+
+def _save_all_agent_states():
+    """Save all agent states to JSONBin and local files."""
+    global _agent_states_cache
+
+    # Save to JSONBin
+    if _jsonbin_enabled():
+        _save_to_jsonbin(JSONBIN_AGENTS_BIN_ID, _agent_states_cache)
+
+    # Also save locally
+    ensure_directories()
+    for style, state in _agent_states_cache.items():
+        state_file = AGENT_STATES_DIR / f"{style}.json"
+        with open(state_file, "w") as f:
+            json.dump(state, f, indent=2)
+
+
+def load_agent_state(style: str) -> dict:
+    """Load agent state for a specific archetype."""
+    all_states = _load_all_agent_states()
+    return all_states.get(style, get_default_agent_state(style))
 
 
 def save_agent_state(style: str, state: dict):
-    """Save agent state for a specific archetype.
-
-    Args:
-        style: Agent archetype
-        state: State dictionary to save
-    """
-    ensure_directories()
-    state_file = AGENT_STATES_DIR / f"{style}.json"
-
-    with open(state_file, "w") as f:
-        json.dump(state, f, indent=2)
+    """Save agent state for a specific archetype."""
+    global _agent_states_cache
+    _agent_states_cache[style] = state
+    _save_all_agent_states()
 
 
 def add_pattern(style: str, pattern: str, max_patterns: int = 10):
-    """Add a learned pattern to an agent's state.
-
-    Args:
-        style: Agent archetype
-        pattern: Pattern string to add
-        max_patterns: Maximum patterns to keep (oldest removed)
-    """
+    """Add a learned pattern to an agent's state."""
     state = load_agent_state(style)
 
     # Avoid duplicates
@@ -97,14 +176,7 @@ def update_agent_stats(
     points: int,
     call_summary: dict
 ):
-    """Update agent statistics after a call.
-
-    Args:
-        style: Agent archetype
-        outcome: Call outcome
-        points: Points earned
-        call_summary: Brief summary of the call for last_5_calls
-    """
+    """Update agent statistics after a call."""
     state = load_agent_state(style)
 
     state["total_calls"] += 1
@@ -128,17 +200,27 @@ def update_agent_stats(
 
 
 def load_call_history() -> list:
-    """Load all call history.
+    """Load all call history."""
+    global _call_history_cache
 
-    Returns:
-        List of call records
-    """
+    # Return cache if populated
+    if _call_history_cache:
+        return _call_history_cache
+
+    # Try JSONBin first
+    if _jsonbin_enabled():
+        data = _load_from_jsonbin(JSONBIN_CALLS_BIN_ID)
+        if data and isinstance(data.get("calls"), list):
+            _call_history_cache = data["calls"]
+            return _call_history_cache
+
+    # Fall back to local file
     ensure_directories()
-
     if CALL_LOGS_FILE.exists():
         try:
             with open(CALL_LOGS_FILE) as f:
-                return json.load(f)
+                _call_history_cache = json.load(f)
+                return _call_history_cache
         except json.JSONDecodeError:
             pass
 
@@ -146,13 +228,12 @@ def load_call_history() -> list:
 
 
 def log_call(call_record: dict):
-    """Log a completed call.
+    """Log a completed call."""
+    global _call_history_cache
 
-    Args:
-        call_record: Full call record to log
-    """
-    ensure_directories()
-    history = load_call_history()
+    # Ensure we have the latest
+    if not _call_history_cache:
+        load_call_history()
 
     # Add call ID and timestamp if not present
     if "call_id" not in call_record:
@@ -160,39 +241,44 @@ def log_call(call_record: dict):
     if "timestamp" not in call_record:
         call_record["timestamp"] = datetime.now().isoformat()
 
-    history.append(call_record)
+    _call_history_cache.append(call_record)
 
+    # Save to JSONBin
+    if _jsonbin_enabled():
+        _save_to_jsonbin(JSONBIN_CALLS_BIN_ID, {"calls": _call_history_cache})
+
+    # Also save locally
+    ensure_directories()
     with open(CALL_LOGS_FILE, "w") as f:
-        json.dump(history, f, indent=2)
+        json.dump(_call_history_cache, f, indent=2)
+
+    # Print to console for Render logs
+    print(f"\n{'='*60}")
+    print(f"CALL LOG: {call_record['call_id']}")
+    print(f"{'='*60}")
+    print(json.dumps(call_record, indent=2))
+    print(f"{'='*60}\n")
 
 
 def get_leaderboard() -> list:
-    """Get agent leaderboard sorted by total points.
-
-    Returns:
-        List of agent stats sorted by points
-    """
-    ensure_directories()
+    """Get agent leaderboard sorted by total points."""
+    all_states = _load_all_agent_states()
     leaderboard = []
 
-    for style_file in AGENT_STATES_DIR.glob("*.json"):
-        try:
-            with open(style_file) as f:
-                state = json.load(f)
-                if state.get("total_calls", 0) > 0:
-                    leaderboard.append({
-                        "style": state["style"],
-                        "total_calls": state["total_calls"],
-                        "total_points": state["total_points"],
-                        "conversions": state["conversions"],
-                        "frauds_caught": state["frauds_caught"],
-                        "frauds_missed": state["frauds_missed"],
-                        "conversion_rate": round(
-                            100 * state["conversions"] / state["total_calls"], 1
-                        ) if state["total_calls"] > 0 else 0
-                    })
-        except (json.JSONDecodeError, KeyError):
-            continue
+    for style, state in all_states.items():
+        if state.get("total_calls", 0) > 0:
+            leaderboard.append({
+                "style": state["style"],
+                "display_name": state["style"].title(),
+                "total_calls": state["total_calls"],
+                "total_points": state["total_points"],
+                "conversions": state["conversions"],
+                "frauds_caught": state["frauds_caught"],
+                "frauds_missed": state["frauds_missed"],
+                "conversion_rate": round(
+                    100 * state["conversions"] / state["total_calls"], 1
+                ) if state["total_calls"] > 0 else 0
+            })
 
     # Sort by total points descending
     leaderboard.sort(key=lambda x: x["total_points"], reverse=True)
@@ -200,11 +286,7 @@ def get_leaderboard() -> list:
 
 
 def get_overall_stats() -> dict:
-    """Get overall statistics across all agents.
-
-    Returns:
-        Dictionary with aggregate stats
-    """
+    """Get overall statistics across all agents."""
     history = load_call_history()
 
     if not history:
@@ -231,12 +313,19 @@ def get_overall_stats() -> dict:
 
 def clear_all_data():
     """Clear all stored data. Use with caution!"""
-    ensure_directories()
+    global _call_history_cache, _agent_states_cache
 
-    # Clear agent states
+    _call_history_cache = []
+    _agent_states_cache = {}
+
+    # Clear JSONBin
+    if _jsonbin_enabled():
+        _save_to_jsonbin(JSONBIN_CALLS_BIN_ID, {"calls": []})
+        _save_to_jsonbin(JSONBIN_AGENTS_BIN_ID, {})
+
+    # Clear local files
+    ensure_directories()
     for state_file in AGENT_STATES_DIR.glob("*.json"):
         state_file.unlink()
-
-    # Clear call logs
     if CALL_LOGS_FILE.exists():
         CALL_LOGS_FILE.unlink()
