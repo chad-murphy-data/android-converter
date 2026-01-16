@@ -159,15 +159,21 @@ YOUR LEARNINGS FROM PAST CALLS:
     else:
         patterns_section = """
 YOUR LEARNINGS FROM PAST CALLS:
-This is your first shift. No prior experience yet - trust your instincts and your training.
+This is your first shift. No prior experience yet - trust your instincts and learn as you go.
 """
 
     # Turn-based instructions
     turn_instructions = ""
-    if turn_count >= 10:
+    if turn_count >= 13:
         turn_instructions = """
-*** URGENT: You've been on this call too long. Make a decision NOW. ***
-Either [CLOSE: your pitch] or [FLAG: your concerns]. Don't let this drag on.
+*** THIS IS TURN 13 - YOU MUST ACT NOW ***
+You MUST use either [CLOSE: your pitch] or [FLAG: your concerns] in this response.
+No more conversation - make your decision and end the call.
+"""
+    elif turn_count >= 10:
+        turn_instructions = """
+*** URGENT: You've been on this call too long. Make a decision soon. ***
+Consider whether to [CLOSE: your pitch] or [FLAG: your concerns].
 """
     elif turn_count >= 7:
         turn_instructions = """
