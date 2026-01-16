@@ -56,7 +56,7 @@ BASE_FRUSTRATION_PER_TURN = {
 
 MAX_FRUSTRATION = 10.0
 BOUNCE_THRESHOLD = 8.0
-HAND_EARLY_BOUNCE_TURN = 8
+HAND_EARLY_BOUNCE_TURN = 5
 HAND_EARLY_BOUNCE_THRESHOLD = 5.0
 
 
@@ -301,4 +301,4 @@ def extract_motivation_guess(text: str) -> Optional[str]:
     return None
 
 
-MAX_TURNS = 14
+MAX_TURNS = 8

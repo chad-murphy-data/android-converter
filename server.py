@@ -272,16 +272,15 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             })
             break
 
-        # Turn 13 is the last agent turn - force close if they didn't act
-        # Turn 14 will be customer's final response
-        if state.turn >= 13:
+        # Turn 8 is the last agent turn - force close if they didn't act
+        if state.turn >= 8:
             # Agent didn't close/flag despite instructions - force a close
             state.close_attempted = True
             state.close_pitch = "(Agent failed to make explicit close - forced close)"
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Agent forced to close on turn 13]",
+                "text": "[Call ended - Agent forced to close on turn 8]",
                 "turn": state.turn,
                 "is_end": True
             })
