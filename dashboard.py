@@ -74,7 +74,7 @@ async def get_agent_confidence(
 
     try:
         response = client.messages.create(
-            model="claude-haiku-4-20250414",
+            model="claude-3-5-haiku-20241022",
             max_tokens=150,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -132,7 +132,7 @@ async def get_customer_sentiment(
 
     try:
         response = client.messages.create(
-            model="claude-haiku-4-20250414",
+            model="claude-3-5-haiku-20241022",
             max_tokens=100,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -184,7 +184,7 @@ async def generate_learning(
     """
     try:
         response = client.messages.create(
-            model="claude-haiku-4-20250414",
+            model="claude-3-5-haiku-20241022",
             max_tokens=50,
             messages=[{"role": "user", "content": learning_prompt}]
         )

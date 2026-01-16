@@ -179,7 +179,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             user_content = customer_messages[-1]["content"]
 
         agent_response = client.messages.create(
-            model="claude-haiku-4-20250414",
+            model="claude-3-5-haiku-20241022",
             max_tokens=300,
             system=agent_prompt,
             messages=agent_messages + [{"role": "user", "content": user_content}]
@@ -229,7 +229,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         await asyncio.sleep(0.3)
 
         customer_response = client.messages.create(
-            model="claude-haiku-4-20250414",
+            model="claude-3-5-haiku-20241022",
             max_tokens=200,
             system=customer_prompt,
             messages=customer_messages + [{"role": "user", "content": agent_text}]
