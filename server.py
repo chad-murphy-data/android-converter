@@ -170,6 +170,13 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     agent_messages = []
     customer_messages = []
 
+    # Initialize confidence with neutral defaults (updated during conversation)
+    confidence = {
+        "fraud_likelihood": 2,
+        "motivation_guess": {"head": 33, "heart": 34, "hand": 33},
+        "reasoning": "Initial assessment"
+    }
+
     # Agent answers the phone with a scripted greeting (turn 0)
     greeting = f"Hi, thanks for calling! This is {agent.name} with Premiere Properties. How can I help you today?"
 
