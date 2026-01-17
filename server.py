@@ -391,12 +391,15 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
     # Determine outcome
     converted = False
+
+    # Capture agent's motivation guess from dashboard (for both CLOSE and FLAG)
+    dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
+    state.agent_motivation_guess = dominant_motivation
+
     if state.close_attempted and not customer.is_fraud:
         # Check if they would convert
-        dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
         matched = dominant_motivation == customer.motivation
         converted = will_convert(state.sentiment, matched, customer.is_fraud)
-        state.agent_motivation_guess = dominant_motivation
 
     outcome = determine_outcome(
         close_attempted=state.close_attempted,

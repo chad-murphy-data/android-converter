@@ -2,6 +2,7 @@
 
 let ws = null;
 let warmupMode = false;
+let currentFraudRisk = 2; // Track fraud risk for alert bubble
 
 // DOM Elements
 const chatMessages = document.getElementById('chat-messages');
@@ -158,6 +159,18 @@ function addMessage(speaker, text, isBounce = false, isEnd = false) {
         bubble.textContent = text;
         message.appendChild(bubble);
         chatMessages.appendChild(message);
+
+        // Add fraud alert bubble if agent flagged for fraud
+        if (text.includes('flagged for fraud') && currentFraudRisk >= 5) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'message system-message';
+            const alertBubble = document.createElement('div');
+            alertBubble.className = 'bubble fraud-alert-bubble';
+            alertBubble.innerHTML = `<span class="fraud-icon">⚠</span> Agent detected fraud risk: ${currentFraudRisk}/10`;
+            alertDiv.appendChild(alertBubble);
+            chatMessages.appendChild(alertDiv);
+        }
+
         scrollToBottom();
         return;
     }
@@ -226,6 +239,7 @@ function updateDashboard(data) {
 
     // Update fraud risk
     const fraudRisk = confidence.fraud_likelihood || 5;
+    currentFraudRisk = fraudRisk; // Store for alert bubble
     fraudRiskBar.style.width = `${fraudRisk * 10}%`;
     fraudRiskValue.textContent = `${fraudRisk}/10`;
     fraudRiskBar.className = `metric-fill fraud-fill ${fraudRisk >= 7 ? 'high' : fraudRisk >= 4 ? 'medium' : 'low'}`;
