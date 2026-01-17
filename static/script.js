@@ -1,8 +1,8 @@
-// WebSocket connection and UI logic for Android Converter Simulator
+// WebSocket connection and UI logic for Listing Closer Simulator
 
 let ws = null;
 let warmupMode = false;
-let currentFraudRisk = 2; // Track fraud risk for alert bubble
+let currentFraudRisk = 2; // Track sketchy risk for alert bubble
 let currentAgentStyle = null; // Track current agent style for avatar images
 
 // DOM Elements
@@ -406,12 +406,12 @@ function handleCallEnd(data) {
         </div>
         <div class="outcome-details">
             <div class="detail-section">
-                <h4>Customer Profile (Hidden)</h4>
+                <h4>Seller Profile (Hidden)</h4>
                 <div class="detail-grid">
                     <span class="label">Name:</span><span>${customer.name}</span>
                     <span class="label">Tier:</span><span>${data.customer_tier_display}</span>
                     <span class="label">Motivation:</span><span class="motivation-badge ${customer.motivation}">${customer.motivation.toUpperCase()}</span>
-                    <span class="label">Fraud:</span><span class="fraud-badge ${customer.is_fraud ? 'yes' : 'no'}">${customer.is_fraud ? 'YES' : 'No'}</span>
+                    <span class="label">Sketchy:</span><span class="fraud-badge ${customer.is_fraud ? 'yes' : 'no'}">${customer.is_fraud ? 'YES' : 'No'}</span>
                 </div>
             </div>
             <div class="detail-section">
@@ -425,7 +425,7 @@ function handleCallEnd(data) {
                         </span>
                     </span>
                     <span class="label">Action:</span>
-                    <span>${data.close_attempted ? 'Closed' : data.flag_used ? 'Flagged' : data.customer_bounced ? 'Customer Left' : 'Timed Out'}</span>
+                    <span>${data.close_attempted ? 'Closed' : data.flag_used ? 'Flagged' : data.customer_bounced ? 'Seller Left' : 'Timed Out'}</span>
                     <span class="label">Turns:</span><span>${data.turns_used}/14</span>
                 </div>
             </div>

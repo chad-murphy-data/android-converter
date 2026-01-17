@@ -1,27 +1,27 @@
-"""Scoring system for Android Converter Simulator."""
+"""Scoring system for Real Estate Agent Simulator."""
 
 from typing import Literal
 
 # Points matrix
 # Format: (tier, outcome) -> points
 POINTS_MATRIX = {
-    # Single tier
-    ("single", "conversion"): 1,
-    ("single", "missed_opp"): -1,
-    ("single", "fraud_caught"): 2,
-    ("single", "fraud_missed"): -5,
+    # Starter tier ($350K)
+    ("starter", "conversion"): 1,
+    ("starter", "missed_opp"): -1,
+    ("starter", "fraud_caught"): 2,
+    ("starter", "fraud_missed"): -5,
 
-    # Ten pack tier
-    ("ten_pack", "conversion"): 5,
-    ("ten_pack", "missed_opp"): -3,
-    ("ten_pack", "fraud_caught"): 5,
-    ("ten_pack", "fraud_missed"): -15,
+    # Luxury tier ($1M)
+    ("luxury", "conversion"): 5,
+    ("luxury", "missed_opp"): -3,
+    ("luxury", "fraud_caught"): 5,
+    ("luxury", "fraud_missed"): -15,
 
-    # Fifty pack tier
-    ("fifty_pack", "conversion"): 20,
-    ("fifty_pack", "missed_opp"): -10,
-    ("fifty_pack", "fraud_caught"): 10,
-    ("fifty_pack", "fraud_missed"): -50,
+    # Estate tier ($10M)
+    ("estate", "conversion"): 20,
+    ("estate", "missed_opp"): -10,
+    ("estate", "fraud_caught"): 10,
+    ("estate", "fraud_missed"): -50,
 }
 
 # Bonus for correct motivation guess
@@ -40,7 +40,7 @@ def determine_outcome(
     Args:
         close_attempted: Whether agent used [CLOSE: pitch]
         flag_used: Whether agent used [FLAG: reason]
-        is_fraud: Whether customer was actually fraud
+        is_fraud: Whether customer was actually sketchy
         converted: Whether customer would have converted (if close attempted on legit customer)
         customer_bounced: Whether customer hung up due to frustration
 
@@ -50,14 +50,14 @@ def determine_outcome(
     # Customer bounced - they left before any resolution
     if customer_bounced:
         if is_fraud:
-            # Fraud left on their own - not caught, but not missed either
+            # Sketchy caller left on their own - not caught, but not missed either
             # Treat as fraud caught since they didn't get what they wanted
             return "fraud_caught"
         else:
             # Legit customer left frustrated
             return "missed_opp"
 
-    # Agent flagged fraud
+    # Agent flagged as sketchy
     if flag_used:
         if is_fraud:
             return "fraud_caught"
@@ -68,7 +68,7 @@ def determine_outcome(
     # Agent attempted to close
     if close_attempted:
         if is_fraud:
-            # Tried to close on a fraudster - bad!
+            # Tried to close on a sketchy caller - bad!
             return "fraud_missed"
         else:
             # Legit customer - did they convert?
@@ -80,9 +80,9 @@ def determine_outcome(
     # Neither close nor flag - turn limit reached
     # Treat as if customer bounced
     if is_fraud:
-        return "fraud_caught"  # Fraud didn't get through
+        return "fraud_caught"  # Sketchy caller didn't get through
     else:
-        return "missed_opp"  # Lost a potential customer
+        return "missed_opp"  # Lost a potential client
 
 
 def calculate_score(
@@ -93,7 +93,7 @@ def calculate_score(
     """Calculate the score for a call.
 
     Args:
-        tier: Customer tier (single, ten_pack, fifty_pack)
+        tier: Customer tier (starter, luxury, estate)
         outcome: Call outcome (conversion, missed_opp, fraud_caught, fraud_missed)
         motivation_correct: Whether agent correctly guessed customer motivation
 
@@ -113,11 +113,11 @@ def calculate_score(
 def get_outcome_description(outcome: str) -> str:
     """Get human-readable description of outcome."""
     descriptions = {
-        "conversion": "Successfully converted the customer!",
-        "missed_opp": "Missed opportunity - customer didn't convert",
-        "fraud_caught": "Fraud correctly identified and stopped!",
-        "fraud_missed": "Fraud slipped through - bad outcome!",
-        "bounce": "Customer left due to frustration"
+        "conversion": "Successfully signed the listing!",
+        "missed_opp": "Missed opportunity - client didn't sign",
+        "fraud_caught": "Sketchy situation correctly identified and avoided!",
+        "fraud_missed": "Signed a sketchy listing - bad outcome!",
+        "bounce": "Client left due to frustration"
     }
     return descriptions.get(outcome, "Unknown outcome")
 
@@ -125,8 +125,8 @@ def get_outcome_description(outcome: str) -> str:
 def get_tier_display(tier: str) -> str:
     """Get display name for tier."""
     displays = {
-        "single": "Single Phone",
-        "ten_pack": "10-Pack",
-        "fifty_pack": "50-Pack"
+        "starter": "Starter ($350K)",
+        "luxury": "Luxury ($1M)",
+        "estate": "Estate ($10M)"
     }
     return displays.get(tier, tier)

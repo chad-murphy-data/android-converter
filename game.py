@@ -1,4 +1,4 @@
-"""Game mechanics for Android Converter Simulator."""
+"""Game mechanics for Listing Closer Simulator."""
 
 import re
 from dataclasses import dataclass, field

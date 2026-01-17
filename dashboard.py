@@ -4,14 +4,14 @@ import json
 import anthropic
 
 
-AGENT_CONFIDENCE_PROMPT = """Analyze this exchange between a customer service agent and a caller.
+AGENT_CONFIDENCE_PROMPT = """Analyze this exchange between a real estate agent and a potential seller.
 
 Last exchange:
 Agent: {agent_msg}
 Caller: {caller_msg}
 
 Based on this exchange, assess:
-1. Fraud likelihood (1-10, where 10 = definitely fraud)
+1. Sketchy likelihood (1-10, where 10 = definitely a problematic situation)
 2. Customer motivation type (head/heart/hand percentages that sum to 100)
 3. Brief reasoning (one sentence)
 
@@ -27,18 +27,18 @@ Respond in JSON format only:
 }}"""
 
 
-SENTIMENT_PROMPT = """Analyze the customer's emotional state from this exchange.
+SENTIMENT_PROMPT = """Analyze the seller's emotional state from this exchange.
 
 Last exchange:
 Agent: {agent_msg}
 Caller: {caller_msg}
 
-Rate the customer's current state (1-10 for each):
+Rate the seller's current state (1-10 for each):
 - satisfaction: How happy are they with this interaction?
 - trust: How much do they trust the agent?
-- urgency: How urgently do they want to resolve this?
+- urgency: How urgently do they want to sell?
 - frustration: How frustrated are they?
-- likelihood_to_convert: How likely to actually switch to Android?
+- likelihood_to_convert: How likely to sign with this agent?
 - emotional_tone: One word describing their mood
 
 Respond in JSON format only:

@@ -1,4 +1,4 @@
-"""FastAPI server for Android Converter Simulator."""
+"""FastAPI server for Listing Closer Simulator."""
 
 import asyncio
 import os
@@ -171,7 +171,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     customer_messages = []
 
     # Agent answers the phone with a scripted greeting (turn 0)
-    greeting = f"Hi, thanks for calling TechMobile Android support! This is {agent.name}. How can I help you today?"
+    greeting = f"Hi, thanks for calling! This is {agent.name} with Premiere Properties. How can I help you today?"
 
     await websocket.send_json({"type": "typing", "speaker": "agent"})
     await asyncio.sleep(1.0)

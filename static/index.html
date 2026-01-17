@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Android Converter - Agent Learning Lab</title>
+    <title>Listing Closer - Agent Learning Lab</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="main-container">
         <header>
-            <h1>Android Converter</h1>
+            <h1>Listing Closer</h1>
             <p class="subtitle">Agent Learning Lab</p>
         </header>
 
@@ -33,11 +33,11 @@
                     <div class="chat-messages" id="chat-messages">
                         <div class="welcome-message">
                             <h3>Agent Learning Lab</h3>
-                            <p>Watch AI agents learn to handle customer calls over time. Each call features:</p>
+                            <p>Watch AI agents learn to handle listing calls over time. Each call features:</p>
                             <ul>
-                                <li>Random customer persona (motivation + tier + potential fraud)</li>
+                                <li>Random seller persona (motivation + property tier + potential red flags)</li>
                                 <li>Random agent archetype that learns from past calls</li>
-                                <li>Real-time sentiment and fraud analysis</li>
+                                <li>Real-time sentiment and risk analysis</li>
                             </ul>
                             <p>Agents develop patterns from experience. Click "Start Call" to observe.</p>
                         </div>
@@ -72,7 +72,7 @@
                     <h3>Agent Assessment</h3>
                     <div class="metric-group">
                         <div class="metric">
-                            <span class="metric-label">Fraud Risk</span>
+                            <span class="metric-label">Sketchy Risk</span>
                             <div class="metric-bar">
                                 <div class="metric-fill fraud-fill" id="fraud-risk-bar" style="width: 30%"></div>
                             </div>
@@ -115,7 +115,7 @@
 
                 <!-- Customer Sentiment Section -->
                 <div class="dashboard-section" id="sentiment-section">
-                    <h3>Customer Sentiment</h3>
+                    <h3>Seller Sentiment</h3>
                     <div class="sentiment-grid">
                         <div class="sentiment-metric">
                             <span class="sentiment-label">Satisfaction</span>
@@ -146,7 +146,7 @@
                             <span class="sentiment-value" id="frustration-value">3</span>
                         </div>
                         <div class="sentiment-metric">
-                            <span class="sentiment-label">Convert Likelihood</span>
+                            <span class="sentiment-label">Sign Likelihood</span>
                             <div class="sentiment-bar">
                                 <div class="sentiment-fill likelihood-fill" id="likelihood-bar" style="width: 50%"></div>
                             </div>
@@ -162,7 +162,7 @@
                 <!-- Frustration Warning -->
                 <div class="frustration-warning" id="frustration-warning" style="display: none;">
                     <span class="warning-icon">!</span>
-                    <span class="warning-text">High frustration - customer may leave!</span>
+                    <span class="warning-text">High frustration - seller may leave!</span>
                 </div>
             </div>
         </div>

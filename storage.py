@@ -1,4 +1,4 @@
-"""Storage and persistence for Android Converter Simulator.
+"""Storage and persistence for Listing Closer Simulator.
 
 Uses JSONBin.io for cloud persistence (free tier).
 Falls back to local files if JSONBin is not configured.
