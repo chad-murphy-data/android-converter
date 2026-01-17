@@ -157,6 +157,11 @@ This is a single phone call simulation. Everything must happen on THIS call.
 - Make your decision based on THIS conversation only
 - If asked about scheduling or follow-up, say "Let's just focus on this conversation for now"
 - Keep the conversation focused on whether you trust this agent or not
+
+RESPONSE FOCUS:
+- Focus on evaluating whether this agent meets your needs based on your personality type
+- Keep your situation simple - stick to your call reason, don't invent elaborate complications
+- Your job is to test the agent's skills, not to create an interesting story
 """
 
 
