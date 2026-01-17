@@ -406,80 +406,92 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         })
 
     # Determine outcome
-    converted = False
+    try:
+        converted = False
 
-    # Capture agent's motivation guess from dashboard (for both CLOSE and FLAG)
-    dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
-    state.agent_motivation_guess = dominant_motivation
+        # Capture agent's motivation guess from dashboard (for both CLOSE and FLAG)
+        dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
+        state.agent_motivation_guess = dominant_motivation
 
-    if state.close_attempted and not customer.is_fraud:
-        # Check if they would convert
-        matched = dominant_motivation == customer.motivation
-        converted = will_convert(state.sentiment, matched, customer.is_fraud)
+        if state.close_attempted and not customer.is_fraud:
+            # Check if they would convert
+            matched = dominant_motivation == customer.motivation
+            converted = will_convert(state.sentiment, matched, customer.is_fraud)
 
-    outcome = determine_outcome(
-        close_attempted=state.close_attempted,
-        flag_used=state.flag_used,
-        is_fraud=customer.is_fraud,
-        converted=converted,
-        customer_bounced=state.customer_bounced
-    )
+        outcome = determine_outcome(
+            close_attempted=state.close_attempted,
+            flag_used=state.flag_used,
+            is_fraud=customer.is_fraud,
+            converted=converted,
+            customer_bounced=state.customer_bounced
+        )
 
-    # Calculate score
-    motivation_correct = state.agent_motivation_guess == customer.motivation
-    points = calculate_score(customer.tier, outcome, motivation_correct)
+        # Calculate score
+        motivation_correct = state.agent_motivation_guess == customer.motivation
+        points = calculate_score(customer.tier, outcome, motivation_correct)
 
-    # Generate learning (based on agent's read, not actual motivation)
-    learning_prompt = get_post_call_learning_prompt(
-        agent=agent,
-        customer_tier=customer.tier,
-        agent_motivation_guess=state.agent_motivation_guess or "unknown",
-        guess_was_correct=motivation_correct,
-        was_fraud=customer.is_fraud,
-        outcome=outcome
-    )
-    new_pattern = await generate_learning(client, learning_prompt)
+        # Generate learning (based on agent's read, not actual motivation)
+        learning_prompt = get_post_call_learning_prompt(
+            agent=agent,
+            customer_tier=customer.tier,
+            agent_motivation_guess=state.agent_motivation_guess or "unknown",
+            guess_was_correct=motivation_correct,
+            was_fraud=customer.is_fraud,
+            outcome=outcome
+        )
+        new_pattern = await generate_learning(client, learning_prompt)
 
-    # Save pattern to agent state
-    add_pattern(agent.style, new_pattern)
+        # Save pattern to agent state
+        add_pattern(agent.style, new_pattern)
 
-    # Update agent stats
-    call_summary = {
-        "call_id": call_id,
-        "customer_tier": customer.tier,
-        "customer_motivation": customer.motivation,
-        "was_fraud": customer.is_fraud,
-        "outcome": outcome,
-        "points": points,
-        "turns": state.turn
-    }
-    update_agent_stats(agent.style, outcome, points, call_summary)
+        # Update agent stats
+        call_summary = {
+            "call_id": call_id,
+            "customer_tier": customer.tier,
+            "customer_motivation": customer.motivation,
+            "was_fraud": customer.is_fraud,
+            "outcome": outcome,
+            "points": points,
+            "turns": state.turn
+        }
+        update_agent_stats(agent.style, outcome, points, call_summary)
 
-    # Log full call
-    call_record = {
-        "call_id": str(call_id),
-        "timestamp": datetime.now().isoformat(),
-        "customer": customer.to_dict(),
-        "agent": agent.to_dict(),
-        "turns_used": state.turn,
-        "close_attempted": state.close_attempted,
-        "close_pitch": state.close_pitch,
-        "flag_used": state.flag_used,
-        "flag_reason": state.flag_reason,
-        "customer_bounced": state.customer_bounced,
-        "outcome": outcome,
-        "converted": converted,
-        "agent_motivation_guess": state.agent_motivation_guess,
-        "motivation_correct": motivation_correct,
-        "points": points,
-        "new_pattern": new_pattern,
-        "final_sentiment": state.sentiment,
-        "final_frustration": state.frustration,
-        "transcript": state.transcript
-    }
-    log_call(call_record)
+        # Log full call
+        call_record = {
+            "call_id": str(call_id),
+            "timestamp": datetime.now().isoformat(),
+            "customer": customer.to_dict(),
+            "agent": agent.to_dict(),
+            "turns_used": state.turn,
+            "close_attempted": state.close_attempted,
+            "close_pitch": state.close_pitch,
+            "flag_used": state.flag_used,
+            "flag_reason": state.flag_reason,
+            "customer_bounced": state.customer_bounced,
+            "outcome": outcome,
+            "converted": converted,
+            "agent_motivation_guess": state.agent_motivation_guess,
+            "motivation_correct": motivation_correct,
+            "points": points,
+            "new_pattern": new_pattern,
+            "final_sentiment": state.sentiment,
+            "final_frustration": state.frustration,
+            "transcript": state.transcript
+        }
+        log_call(call_record)
 
-    # Send call end summary
+    except Exception as e:
+        print(f"ERROR in post-call processing: {e}")
+        import traceback
+        traceback.print_exc()
+        # Set fallback values so call_end still gets sent
+        outcome = "missed_opp"
+        points = 0
+        converted = False
+        motivation_correct = False
+        new_pattern = "(Error generating learning)"
+
+    # Send call end summary (always send, even if there was an error above)
     await websocket.send_json({
         "type": "call_end",
         "call_id": call_id,
