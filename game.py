@@ -56,8 +56,9 @@ BASE_FRUSTRATION_PER_TURN = {
 
 MAX_FRUSTRATION = 10.0
 BOUNCE_THRESHOLD = 8.0
-HAND_EARLY_BOUNCE_TURN = 5
-HAND_EARLY_BOUNCE_THRESHOLD = 5.0
+MIN_BOUNCE_TURN = 3  # Nobody bounces before turn 3 - give agent a chance
+HAND_EARLY_BOUNCE_TURN = 4  # HAND customers can bounce after turn 4 at lower threshold
+HAND_EARLY_BOUNCE_THRESHOLD = 6.0
 
 
 def check_close_attempt(text: str) -> tuple[bool, str]:
@@ -223,6 +224,10 @@ def check_customer_bounce(
     Returns:
         True if customer should bounce
     """
+    # Nobody bounces before minimum turn - give agent a chance
+    if state.turn < MIN_BOUNCE_TURN:
+        return False
+
     # Check sentiment frustration (from LLM analysis)
     sentiment_frustration = state.sentiment.get("frustration", 0)
 
@@ -233,10 +238,10 @@ def check_customer_bounce(
     if effective_frustration >= BOUNCE_THRESHOLD:
         return True
 
-    # Hand customers bail earlier
+    # Hand customers bail earlier (after turn 4 at lower threshold)
     if (state.customer.motivation == "hand" and
-        state.turn > HAND_EARLY_BOUNCE_TURN and
-        effective_frustration > HAND_EARLY_BOUNCE_THRESHOLD):
+        state.turn >= HAND_EARLY_BOUNCE_TURN and
+        effective_frustration >= HAND_EARLY_BOUNCE_THRESHOLD):
         return True
 
     return False
