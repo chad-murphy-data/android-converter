@@ -92,6 +92,7 @@ function connect() {
 
 // Handle incoming WebSocket messages
 function handleMessage(data) {
+    console.log('Received message:', data.type, data);
     switch (data.type) {
         case 'call_start':
             handleCallStart(data);
@@ -110,8 +111,11 @@ function handleMessage(data) {
             updateDashboard(data);
             break;
         case 'call_end':
+            console.log('Call end received:', data);
             handleCallEnd(data);
             break;
+        default:
+            console.log('Unknown message type:', data.type);
     }
 }
 
@@ -381,12 +385,14 @@ function resetDashboard() {
 
 // Handle call end
 function handleCallEnd(data) {
-    // Refresh agent scores from leaderboard
-    loadInitialStats();
+    console.log('handleCallEnd called with:', data);
+    try {
+        // Refresh agent scores from leaderboard
+        loadInitialStats();
 
-    // Create outcome card
-    const card = document.createElement('div');
-    card.className = `outcome-card ${data.outcome}`;
+        // Create outcome card
+        const card = document.createElement('div');
+        card.className = `outcome-card ${data.outcome}`;
 
     const outcomeEmoji = {
         'conversion': '+',
@@ -455,11 +461,16 @@ function handleCallEnd(data) {
         </div>
     `;
 
-    chatMessages.appendChild(card);
-    scrollToBottom();
+        chatMessages.appendChild(card);
+        scrollToBottom();
 
-    // Re-enable start button
-    startButton.disabled = false;
+        // Re-enable start button
+        startButton.disabled = false;
+    } catch (error) {
+        console.error('Error in handleCallEnd:', error);
+        // Re-enable start button even on error
+        startButton.disabled = false;
+    }
 }
 
 // Update stats display

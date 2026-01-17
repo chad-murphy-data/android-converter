@@ -38,71 +38,73 @@ NAME_BANK = [
 ]
 
 # Call reasons by tier - legitimate sellers considering switching agents
+# Each opener should establish: greeting + what they're selling + why they're calling
 LEGIT_REASONS = {
     "starter": [
         # Trust/Relationship concerns
-        "My current agent hasn't returned my calls in two weeks. I'm starting to wonder if they even care about selling my place.",
-        "I've been with my agent for three months and we've had zero showings. Something's not working.",
-        "My neighbor sold their similar house in a week and mine's been sitting. Makes me think I have the wrong agent.",
-        "I don't feel like my agent really understands my neighborhood. They keep comparing my place to houses across town.",
+        "Hi, I'm trying to sell my home - a three-bedroom in the Heights - and my current agent hasn't returned my calls in two weeks. Starting to wonder if they even care.",
+        "Hi there. I have my first house on the market, been listed for three months with zero showings. Something's not working and I think I need a new agent.",
+        "Hey, so I'm selling my place and my neighbor sold their similar house in a week while mine just sits there. Makes me think I have the wrong agent.",
+        "Hi, I'm selling my townhouse and I don't feel like my agent really understands my neighborhood. They keep comparing my place to houses across town.",
         # Process/Communication frustrations
-        "My agent keeps pushing me to lower the price but won't explain their marketing strategy.",
-        "I found out my listing photos are terrible compared to other houses. My agent said they're 'fine.'",
-        "Every time I ask my agent for an update, I get vague answers. I just want honest communication.",
-        "My agent missed our last two scheduled calls. I need someone reliable.",
+        "Hello. I'm trying to sell my condo and my agent keeps pushing me to lower the price but won't explain their marketing strategy. I need a second opinion.",
+        "Hi, I'm selling my first home and I just found out my listing photos are terrible compared to other houses. My agent said they're 'fine.' I don't think that's okay.",
+        "Hi there. I have a house listed right now and every time I ask my agent for an update, I get vague answers. I just want honest communication.",
+        "Hello, I'm selling my place and my agent has missed our last two scheduled calls. I need someone more reliable.",
     ],
     "luxury": [
         # Service/Expectations
-        "I'm selling a million-dollar home and my agent is treating it like a starter house. I need someone who gets this market.",
-        "My current agent doesn't have connections in the luxury market. I keep seeing the same listing agents at the high-end open houses.",
-        "I've had three lowball offers and my agent seems excited about all of them. They don't understand my position.",
-        "My agent's marketing is embarrassing for a property at this price point. The brochure looks like it was made in Word.",
+        "Hi, I'm selling a home in the million-dollar range and my current agent is treating it like a starter house. I need someone who actually gets this market.",
+        "Hello. I'm listing a luxury property and my current agent doesn't seem to have connections in this market. Honestly, it's frustrating.",
+        "Hi there. I have a luxury home on the market and I've had three lowball offers. My agent seems excited about all of them but they don't understand my position.",
+        "Hi, I'm selling a high-end property and my agent's marketing is embarrassing for this price point. The brochure looks like it was made in Word.",
         # Market expertise
-        "The luxury market moves differently and my current agent doesn't seem to understand that.",
-        "I need an agent who knows how to attract serious buyers, not tourists who just want to see a nice house.",
-        "My agent keeps suggesting open houses. That's not how you sell at this price point.",
+        "Hello, I have a luxury home for sale and the luxury market moves differently. My current agent doesn't seem to understand that.",
+        "Hi, I'm trying to sell a home around the million-dollar mark and I need an agent who knows how to attract serious buyers, not tourists who just want to see a nice house.",
+        "Hi there. I'm selling a luxury property and my agent keeps suggesting open houses. That's not how you sell at this price point.",
     ],
     "estate": [
         # Discretion/Privacy
-        "I need complete discretion on this sale. My current situation requires someone who understands privacy.",
-        "This property has been in my family for generations. I need someone who treats it with the respect it deserves.",
-        "I'm not looking for the highest bidder necessarily. I want to know this property goes to the right buyer.",
+        "Hello. I'm looking to sell a significant property - a family estate - and I need complete discretion on this sale. My current situation requires someone who understands privacy.",
+        "Hi, I'm calling about selling an estate property that's been in my family for generations. I need someone who treats it with the respect it deserves.",
+        "Hello. I'm selling a large estate and I'm not necessarily looking for the highest bidder. I want to know this property goes to the right buyer.",
         # Strategic concerns
-        "The estate is complicated - multiple structures, easements, water rights. My current agent is in over their head.",
-        "I've had my current agent for a year with no movement. At this price point, I expected a different level of service.",
-        "My advisor recommended I interview other agents. The current approach isn't working.",
-        "This needs to be handled correctly. One wrong move and we'll have press coverage we don't want.",
+        "Hi there. I'm selling a complicated estate - multiple structures, easements, water rights. My current agent is in over their head and I need someone who can actually handle this.",
+        "Hello, I have an estate listing that's been on the market for a year with no movement. At this price point, I expected a different level of service.",
+        "Hi, I'm selling a large estate property and my advisor recommended I interview other agents. The current approach just isn't working.",
+        "Hello. I'm looking to sell a significant estate property. This needs to be handled correctly - one wrong move with a property like this and we'll have press coverage we don't want.",
     ]
 }
 
 # Call reasons by tier - sketchy callers (something feels off)
+# These establish context but with red flags baked in
 SKETCHY_REASONS = {
     "starter": [
         # Urgency that doesn't add up
-        "I need to sell this place fast - like, this week. Don't ask why, just tell me you can make it happen.",
-        "My last agent was asking too many questions. I just need someone who can close deals quick.",
-        "I'm relocating for work and need this done before anyone finds out I'm leaving.",
+        "Hi, I need to sell a property fast - like, this week fast. Don't ask why, just tell me you can make it happen.",
+        "Hey, I'm selling a house and my last agent was asking too many questions. I just need someone who can close deals quick.",
+        "Hi there. I'm selling my place and I'm relocating for work. Need this done before anyone finds out I'm leaving.",
         # Evasive about basics
-        "I inherited this place from a relative. I've never actually been inside but I need it sold.",
-        "The house is occupied by tenants who don't know it's for sale yet. We'll deal with that later.",
+        "Hello, I inherited a house from a relative. I've never actually been inside but I need it sold as soon as possible.",
+        "Hi, I have a property to sell but it's occupied by tenants who don't know it's for sale yet. We'll deal with that later.",
     ],
     "luxury": [
         # Pressure and urgency
-        "I need this sold before the end of the quarter. Don't ask about the timeline, just make it happen.",
-        "My previous agent backed out for some reason. I need someone who doesn't get cold feet.",
-        "There might be some... complications with the title. Nothing that should slow us down though.",
+        "Hello, I have a luxury property I need sold before the end of the quarter. Don't ask about the timeline, just make it happen.",
+        "Hi, I'm selling a high-end property. My previous agent backed out for some reason. I need someone who doesn't get cold feet.",
+        "Hi there. I'm selling a luxury home and there might be some... complications with the title. Nothing that should slow us down though.",
         # Authority without verification
-        "I'm handling this sale for a family member who's unavailable. They gave me full authority.",
-        "The property is in a trust and I'm the trustee. We can sort out the paperwork after we have a buyer.",
+        "Hello, I'm handling the sale of a luxury property for a family member who's unavailable. They gave me full authority to proceed.",
+        "Hi, I'm selling a property that's in a trust - I'm the trustee. We can sort out the paperwork after we have a buyer.",
     ],
     "estate": [
         # Unusual circumstances
-        "This sale needs to happen quietly. No public listings, no open houses, no questions about why.",
-        "I represent a party who wishes to remain anonymous throughout this transaction.",
-        "The current owner is... no longer able to manage this themselves. I have power of attorney somewhere.",
+        "Hello. I have a significant estate property that needs to be sold quietly. No public listings, no open houses, no questions about why.",
+        "Hi, I represent a party who wishes to remain anonymous throughout this transaction. It's a substantial estate property.",
+        "Hello, I'm calling about an estate property. The current owner is... no longer able to manage this themselves. I have power of attorney somewhere.",
         # Pressure and intimidation
-        "I've worked with your competitor and they couldn't handle this. I hope you're more capable.",
-        "This is a significant property and a significant commission. I expect significant service without significant delays.",
+        "Hi there. I'm looking to sell a significant estate property. I've worked with your competitor and they couldn't handle this. I hope you're more capable.",
+        "Hello. I have a significant estate to sell - significant property, significant commission. I expect significant service without significant delays.",
     ]
 }
 
