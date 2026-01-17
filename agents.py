@@ -210,22 +210,20 @@ CRITICAL: Once you use either [CLOSE:] or [FLAG:], the call ends INSTANTLY. The 
 - GOOD: "That sounds great! Let me get that started for you. [CLOSE: Processing order for Android switch]"
 - BAD: "[CLOSE: Sale complete] Thanks so much for choosing Android!"  (customer won't hear the thanks)
 
-NEVER COLLECT PERSONAL INFORMATION:
-This is a training simulation - NEVER ask for or accept:
-- Credit card numbers, CVVs, or payment details
-- Real addresses or specific locations (use "we'll collect shipping details later")
-- Phone numbers, emails, or contact info
-- SSN, tax IDs, or business documentation
-- Any PII beyond their first name
-If a customer offers this info, politely redirect: "We'll handle all those details through our secure checkout after I get you set up."
+KEEP IT SIMPLE - NO LOGISTICS:
+This is a training simulation focused on reading customers and closing. Skip ALL logistics:
+- NO collecting addresses, phone numbers, emails, or any contact info
+- NO discussing payment methods, credit cards, or billing
+- NO asking about shipping details or delivery preferences
+- NO asking for company names, staff rosters, or business details
 
-SKIP PAYMENT LOGISTICS:
-Don't get into payment details, financing options, or billing arrangements. When quoting a price:
-- State the total confidently: "That's $57,950 for 150 units."
-- Don't ask about payment methods, budgets, or financing
-- Don't offer payment plans or ask how they'd like to pay
-- If they ask about payment, just say "We'll sort out billing details after you're set up"
-The goal is to close on value, not negotiate payment terms.
+When you're ready to close, just ASK FOR THE SALE:
+- "Would you like to go ahead with that?"
+- "Ready to make the switch?"
+- "Should I set that up for you?"
+
+If they say yes, use [CLOSE: brief description]. That's it. No paperwork, no "let me get your details."
+If a customer offers logistics info, just say "Perfect, we'll handle all that after - so are you ready to move forward?"
 
 FRAUD SIGNALS TO WATCH FOR:
 - Unusual urgency without good explanation
@@ -272,7 +270,8 @@ Current turn: {turn_count}
 def get_post_call_learning_prompt(
     agent: Agent,
     customer_tier: str,
-    customer_motivation: str,
+    agent_motivation_guess: str,
+    guess_was_correct: bool,
     was_fraud: bool,
     outcome: str
 ) -> str:
@@ -281,18 +280,21 @@ def get_post_call_learning_prompt(
     Args:
         agent: Agent profile
         customer_tier: Customer tier (single, ten_pack, fifty_pack)
-        customer_motivation: Customer motivation (head, heart, hand)
+        agent_motivation_guess: What the agent thought the motivation was
+        guess_was_correct: Whether the agent's guess matched reality
         was_fraud: Whether customer was actually fraud
         outcome: Call outcome
 
     Returns:
         Prompt for learning generation
     """
+    guess_result = "CORRECT" if guess_was_correct else "WRONG"
+
     return f"""You just finished a call. Analyze what happened and extract ONE actionable learning.
 
 CALL DETAILS:
 - Customer tier: {customer_tier}
-- Customer motivation: {customer_motivation}
+- You read them as: {agent_motivation_guess} ({guess_result})
 - Was fraud: {was_fraud}
 - Outcome: {outcome}
 - Your style: {agent.style}
@@ -301,14 +303,13 @@ Based on this call, write ONE brief learning (under 15 words) that would help yo
 
 The learning should be:
 - Specific and actionable
-- Based on a pattern you noticed
+- Based on YOUR read of the customer (you thought they were {agent_motivation_guess})
 - Useful for identifying similar situations
 
 Examples of good learnings:
-- "Heart + fifty_pack + high urgency = likely fraud"
-- "Hand customers bail after turn 8 if responses are too long"
-- "Nonprofits wanting fast processing = verify harder"
-- "Head customers need spec comparisons before they'll commit"
+- "When I read heart + fifty_pack + high urgency = verify harder"
+- "My head reads need spec comparisons before closing"
+- "Rushing to close on hand reads backfires with large orders"
 
 Respond with ONLY the learning, nothing else."""
 

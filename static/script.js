@@ -10,10 +10,12 @@ const startButton = document.getElementById('start-button');
 const warmupButton = document.getElementById('warmup-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const turnCount = document.getElementById('turn-count');
-const callCount = document.getElementById('call-count');
-const totalPoints = document.getElementById('total-points');
-const convertedCount = document.getElementById('converted-count');
-const fraudCaughtCount = document.getElementById('fraud-caught-count');
+// Agent score elements
+const closerPoints = document.getElementById('closer-points');
+const detectivePoints = document.getElementById('detective-points');
+const empathPoints = document.getElementById('empath-points');
+const robotPoints = document.getElementById('robot-points');
+const gamblerPoints = document.getElementById('gambler-points');
 
 // Agent badge elements
 const agentBadge = document.getElementById('agent-badge');
@@ -357,10 +359,8 @@ function resetDashboard() {
 
 // Handle call end
 function handleCallEnd(data) {
-    // Update stats
-    if (data.overall_stats) {
-        updateStats(data.overall_stats);
-    }
+    // Refresh agent scores from leaderboard
+    loadInitialStats();
 
     // Create outcome card
     const card = document.createElement('div');
@@ -451,12 +451,45 @@ function updateStats(stats) {
 // Load initial stats
 async function loadInitialStats() {
     try {
-        const response = await fetch('/api/stats');
-        const stats = await response.json();
-        updateStats(stats);
+        const response = await fetch('/api/leaderboard');
+        const leaderboard = await response.json();
+        updateAgentScores(leaderboard);
     } catch (error) {
         console.error('Failed to load stats:', error);
     }
+}
+
+// Update per-agent scores in stats bar
+function updateAgentScores(leaderboard) {
+    // Reset all to 0
+    closerPoints.textContent = '0';
+    detectivePoints.textContent = '0';
+    empathPoints.textContent = '0';
+    robotPoints.textContent = '0';
+    gamblerPoints.textContent = '0';
+
+    // Update from leaderboard data
+    leaderboard.forEach(agent => {
+        const points = agent.total_points || 0;
+        const pointsText = points >= 0 ? `+${points}` : `${points}`;
+        switch (agent.style) {
+            case 'closer':
+                closerPoints.textContent = pointsText;
+                break;
+            case 'detective':
+                detectivePoints.textContent = pointsText;
+                break;
+            case 'empath':
+                empathPoints.textContent = pointsText;
+                break;
+            case 'robot':
+                robotPoints.textContent = pointsText;
+                break;
+            case 'gambler':
+                gamblerPoints.textContent = pointsText;
+                break;
+        }
+    });
 }
 
 // Load warmup status

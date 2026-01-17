@@ -371,33 +371,43 @@ header .subtitle {
     }
 }
 
-/* Stats bar */
+/* Stats bar - Agent scores */
 .stats-bar {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    padding: 12px 20px;
+    padding: 10px 16px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 16px;
-    font-size: 0.9rem;
+    gap: 12px;
+    font-size: 0.85rem;
 }
 
-.stats-bar .divider {
-    opacity: 0.3;
+.agent-score {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.stats-bar .stat.points strong {
-    color: #f39c12;
+.agent-score-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: white;
 }
 
-.stats-bar .stat.converted strong {
-    color: #2ecc71;
-}
-
-.stats-bar .stat.fraud strong {
-    color: #3498db;
-}
+.agent-score.closer .agent-score-icon { background: #e74c3c; }
+.agent-score.detective .agent-score-icon { background: #3498db; }
+.agent-score.empath .agent-score-icon { background: #9b59b6; }
+.agent-score.robot .agent-score-icon { background: #95a5a6; }
+.agent-score.gambler .agent-score-icon { background: #f39c12; }
 
 /* Button row */
 .button-row {
