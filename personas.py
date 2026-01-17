@@ -121,21 +121,15 @@ def generate_customer(warmup_mode: bool = False) -> Customer:
     """Generate a random customer profile.
 
     Args:
-        warmup_mode: If True, sketchy rate is 5% (vs 15% normal)
+        warmup_mode: Currently unused, kept for API compatibility
     """
     name = random.choice(NAME_BANK)
     tier = random.choice(["starter", "luxury", "estate"])
     motivation = random.choice(["head", "heart", "hand"])
 
-    # Sketchy determination
-    sketchy_rate = 0.05 if warmup_mode else 0.15
-    is_sketchy = random.random() < sketchy_rate
-
-    # Select call reason
-    if is_sketchy:
-        call_reason = random.choice(SKETCHY_REASONS[tier])
-    else:
-        call_reason = random.choice(LEGIT_REASONS[tier])
+    # Sketchy/fraud scenarios disabled for now - all customers are legitimate
+    is_sketchy = False
+    call_reason = random.choice(LEGIT_REASONS[tier])
 
     patience = PATIENCE_BY_MOTIVATION[motivation]
 
@@ -164,13 +158,14 @@ RESPONSE FOCUS:
 - Keep your situation simple - stick to your call reason, don't invent elaborate complications
 - Your job is to test the agent's skills, not to create an interesting story
 
-DECISION AUTHORITY:
-- You are the SOLE decision-maker. You can hire this agent yourself, right now.
-- Do NOT invent attorneys, advisors, family members, partners, or anyone else.
-- Do NOT mention needing to "coordinate with" or "check with" anyone.
-- If asked "who else is involved?" - the answer is "Just me. I make this decision."
+DECISION AUTHORITY - CRITICAL:
+- You are the SOLE decision-maker. You can hire this agent yourself, right now, on this call.
+- There is NO ONE ELSE: no attorney, no advisor, no assistant, no family member, no partner, no spouse.
+- Do NOT invent other people. Do NOT mention anyone who needs to "follow up" or "coordinate."
+- Do NOT say "my assistant will..." or "I'll have my people..." - YOU handle everything directly.
+- If asked "who else is involved?" - answer "Just me."
 - You have full authority to say YES or NO on this call.
-- At the end of the call, you MUST give a clear answer (yes or no) - there is no "later."
+- When you say YES, that's the deal - no one else needs to call or follow up.
 - If the agent builds rapport, addresses your concerns, and asks for your business, say YES.
 - If the agent fails to connect or address your needs, say NO.
 
