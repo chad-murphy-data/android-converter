@@ -3,6 +3,7 @@
 let ws = null;
 let warmupMode = false;
 let currentFraudRisk = 2; // Track fraud risk for alert bubble
+let currentAgentStyle = null; // Track current agent style for avatar images
 
 // DOM Elements
 const chatMessages = document.getElementById('chat-messages');
@@ -128,6 +129,7 @@ function handleCallStart(data) {
     // Update agent badge
     const agent = data.agent;
     const agentInfo = data.agent_info;
+    currentAgentStyle = agent.style; // Store for avatar images
     agentIcon.textContent = AGENT_ICONS[agent.style] || '?';
     agentIcon.className = `agent-icon ${agent.style}`;
     agentName.textContent = agent.name;
@@ -181,7 +183,17 @@ function addMessage(speaker, text, isBounce = false, isEnd = false) {
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.textContent = speaker === 'agent' ? 'A' : 'C';
+
+    // Use image for agent avatar, letter for customer (for now)
+    if (speaker === 'agent' && currentAgentStyle) {
+        const img = document.createElement('img');
+        img.src = `/avatars/${currentAgentStyle}.png`;
+        img.alt = currentAgentStyle;
+        img.className = 'avatar-img';
+        avatar.appendChild(img);
+    } else {
+        avatar.textContent = speaker === 'agent' ? 'A' : 'C';
+    }
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
@@ -204,7 +216,17 @@ function showTypingIndicator(speaker) {
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.textContent = speaker === 'agent' ? 'A' : 'C';
+
+    // Use image for agent avatar, letter for customer (for now)
+    if (speaker === 'agent' && currentAgentStyle) {
+        const img = document.createElement('img');
+        img.src = `/avatars/${currentAgentStyle}.png`;
+        img.alt = currentAgentStyle;
+        img.className = 'avatar-img';
+        avatar.appendChild(img);
+    } else {
+        avatar.textContent = speaker === 'agent' ? 'A' : 'C';
+    }
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';

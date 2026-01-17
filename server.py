@@ -77,6 +77,15 @@ async def root():
     return FileResponse("static/index.html")
 
 
+@app.get("/avatars/{filename}")
+async def get_avatar(filename: str):
+    """Serve agent avatar images from root directory."""
+    filepath = Path(filename)
+    if filepath.suffix == ".png" and filepath.stem in ["closer", "detective", "empath", "robot", "gambler"]:
+        return FileResponse(filename)
+    return FileResponse("static/index.html")  # Fallback
+
+
 @app.get("/api/stats")
 async def get_stats():
     """Get overall statistics."""
