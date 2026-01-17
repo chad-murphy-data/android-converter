@@ -275,14 +275,59 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             "turn": state.turn
         })
 
-        # If agent closed or flagged, end call immediately
-        if close_attempted or flag_used:
-            # Send a call-ending system message so UI knows conversation is over
-            end_reason = "closed the sale" if close_attempted else "flagged for fraud"
+        # If agent flagged, end call immediately (no customer response needed)
+        if flag_used:
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": f"[Call ended - Agent {end_reason}]",
+                "text": "[Call ended - Agent flagged for fraud]",
+                "turn": state.turn,
+                "is_end": True
+            })
+            break
+
+        # If agent closed, let customer respond with YES or NO
+        if close_attempted:
+            # Get customer's final response to the close
+            await asyncio.sleep(1.0)
+            await websocket.send_json({"type": "typing", "speaker": "customer"})
+            await asyncio.sleep(1.0)
+
+            # Add instruction for customer to give final answer
+            close_instruction = "\n\n[The agent has asked for your business. You MUST respond with a clear YES or NO. This is your final answer.]"
+            customer_response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=150,
+                system=customer_prompt + close_instruction,
+                messages=customer_messages + [{"role": "user", "content": agent_text}]
+            )
+
+            customer_text = customer_response.content[0].text
+
+            # Record in transcript
+            state.transcript.append({
+                "speaker": "customer",
+                "text": customer_text,
+                "turn": state.turn
+            })
+
+            # Send customer's final response
+            await websocket.send_json({
+                "type": "message",
+                "speaker": "customer",
+                "text": customer_text,
+                "turn": state.turn
+            })
+
+            # Check if customer said yes (converted)
+            customer_lower = customer_text.lower()
+            if any(phrase in customer_lower for phrase in ["yes", "let's do", "i'm in", "let's work", "sounds good", "i'll sign", "let's move forward"]):
+                state.converted_on_close = True
+
+            await websocket.send_json({
+                "type": "message",
+                "speaker": "system",
+                "text": "[Call ended - Agent closed]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -296,7 +341,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Agent forced to close on turn 8]",
+                "text": "[Call ended - Turn limit reached without close]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -407,16 +452,13 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
     # Determine outcome
     try:
-        converted = False
+        # Use the actual customer response to determine conversion
+        # (converted_on_close is set when customer says yes to close)
+        converted = state.converted_on_close and not customer.is_sketchy
 
         # Capture agent's motivation guess from dashboard (for both CLOSE and FLAG)
         dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
         state.agent_motivation_guess = dominant_motivation
-
-        if state.close_attempted and not customer.is_sketchy:
-            # Check if they would convert
-            matched = dominant_motivation == customer.motivation
-            converted = will_convert(state.sentiment, matched, customer.is_sketchy)
 
         outcome = determine_outcome(
             close_attempted=state.close_attempted,

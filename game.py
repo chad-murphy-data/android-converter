@@ -30,6 +30,7 @@ class CallState:
     flag_reason: str = ""
     customer_bounced: bool = False
     agent_motivation_guess: str = ""
+    converted_on_close: bool = False  # Did customer say yes to the close?
 
     def to_dict(self) -> dict:
         return {
