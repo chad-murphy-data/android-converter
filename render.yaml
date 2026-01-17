@@ -7,5 +7,11 @@ services:
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: JSONBIN_API_KEY
+        sync: false
+      - key: JSONBIN_CALLS_BIN_ID
+        sync: false
+      - key: JSONBIN_AGENTS_BIN_ID
+        sync: false
       - key: PYTHON_VERSION
         value: 3.11.4

@@ -34,6 +34,22 @@ def _jsonbin_enabled() -> bool:
     return bool(JSONBIN_API_KEY and JSONBIN_CALLS_BIN_ID and JSONBIN_AGENTS_BIN_ID)
 
 
+def _log_jsonbin_config():
+    """Log JSONBin configuration status at startup."""
+    print("\n" + "=" * 60)
+    print("JSONBin.io Configuration Status")
+    print("=" * 60)
+    print(f"  JSONBIN_API_KEY: {'SET' if JSONBIN_API_KEY else 'NOT SET'}")
+    print(f"  JSONBIN_CALLS_BIN_ID: {JSONBIN_CALLS_BIN_ID if JSONBIN_CALLS_BIN_ID else 'NOT SET'}")
+    print(f"  JSONBIN_AGENTS_BIN_ID: {JSONBIN_AGENTS_BIN_ID if JSONBIN_AGENTS_BIN_ID else 'NOT SET'}")
+    print(f"  JSONBin enabled: {_jsonbin_enabled()}")
+    print("=" * 60 + "\n")
+
+
+# Log config at module load
+_log_jsonbin_config()
+
+
 def _jsonbin_headers() -> dict:
     """Get headers for JSONBin API calls."""
     return {
@@ -45,35 +61,49 @@ def _jsonbin_headers() -> dict:
 def _load_from_jsonbin(bin_id: str) -> Optional[dict]:
     """Load data from a JSONBin bin."""
     if not JSONBIN_API_KEY:
+        print(f"JSONBin load skipped: No API key configured")
         return None
     try:
+        url = f"{JSONBIN_BASE_URL}/{bin_id}/latest"
+        print(f"JSONBin loading from bin {bin_id}...")
         response = httpx.get(
-            f"{JSONBIN_BASE_URL}/{bin_id}/latest",
+            url,
             headers=_jsonbin_headers(),
             timeout=10.0
         )
         if response.status_code == 200:
             data = response.json()
+            print(f"JSONBin load SUCCESS from bin {bin_id}")
             return data.get("record", {})
+        else:
+            print(f"JSONBin load FAILED: status={response.status_code}, response={response.text[:500]}")
     except Exception as e:
-        print(f"JSONBin load error: {e}")
+        print(f"JSONBin load error for bin {bin_id}: {e}")
     return None
 
 
 def _save_to_jsonbin(bin_id: str, data: dict) -> bool:
     """Save data to a JSONBin bin."""
     if not JSONBIN_API_KEY:
+        print(f"JSONBin save skipped: No API key configured")
         return False
     try:
+        url = f"{JSONBIN_BASE_URL}/{bin_id}"
+        print(f"JSONBin saving to bin {bin_id}...")
         response = httpx.put(
-            f"{JSONBIN_BASE_URL}/{bin_id}",
+            url,
             headers=_jsonbin_headers(),
             json=data,
             timeout=10.0
         )
-        return response.status_code == 200
+        if response.status_code == 200:
+            print(f"JSONBin save SUCCESS to bin {bin_id}")
+            return True
+        else:
+            print(f"JSONBin save FAILED: status={response.status_code}, response={response.text[:500]}")
+            return False
     except Exception as e:
-        print(f"JSONBin save error: {e}")
+        print(f"JSONBin save error for bin {bin_id}: {e}")
     return False
 
 
