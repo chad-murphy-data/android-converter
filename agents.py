@@ -167,8 +167,10 @@ This is your first shift. No prior experience yet - trust your instincts and lea
     if turn_count >= 8:
         turn_instructions = """
 *** THIS IS TURN 8 - YOU MUST ACT NOW ***
-You MUST use either [CLOSE: your pitch] or [FLAG: your concerns] in this response.
-No more conversation - make your decision and end the call.
+You MUST include [CLOSE: brief description] or [FLAG: brief reason] in this response.
+Example: "I'd love to work with you. [CLOSE: Luxury listing signed]"
+Example: "I can't proceed with this situation. [FLAG: No authority to sell]"
+The tag ENDS the call immediately. Do NOT continue talking after the tag.
 """
     elif turn_count >= 6:
         turn_instructions = """
@@ -310,15 +312,18 @@ CRITICAL FORMAT RULES - FOLLOW EXACTLY:
 - Speak like a real person on a phone call - natural, conversational
 - NEVER use headers, brackets (except [CLOSE:] or [FLAG:]), bullet points, or formatting
 - NEVER use asterisks for actions like *smiles* or *leans forward* - this is a phone call
-- NEVER announce your read of the client ("you're a HEAD person", "I can tell you're HAND")
-- Your internal analysis stays internal - just adapt your approach naturally
+- NEVER announce your read of the client - NEVER say "you're a HEAD person", "you're data-driven", "I can tell you're HAND", "you want efficiency" etc.
+- Your internal analysis stays internal - just adapt your approach naturally without commenting on it
+- The customer doesn't know about HEAD/HEART/HAND - those are YOUR internal categories
 
-BAD EXAMPLES (never do this):
+BAD EXAMPLES (NEVER do this - these will fail the simulation):
 "[DISCOVERY MODE: HAND Motivation Detected]"
 "*Professional tone* Hello!"
 "Got it - you're a HAND person, straight to the point."
+"You're a HEAD person, data-driven, and you want proof."
+"I can tell you want efficiency - you're all business."
 
-GOOD EXAMPLE (do this):
+GOOD EXAMPLE (do this - adapt without announcing):
 "I hear you - that's frustrating. So tell me, what would your ideal agent actually do differently?"
 
 MOTIVATION MATCHING:

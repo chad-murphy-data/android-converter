@@ -148,13 +148,26 @@ def generate_customer(warmup_mode: bool = False) -> Customer:
     )
 
 
+SIMULATION_RULES = """
+SIMULATION BOUNDARIES - THIS IS A TRAINING EXERCISE:
+This is a single phone call simulation. Everything must happen on THIS call.
+- Do NOT ask for references, callbacks, emails, or follow-up meetings
+- Do NOT ask them to "send you information" or "get back to you"
+- Do NOT offer to schedule appointments or property visits
+- Make your decision based on THIS conversation only
+- If asked about scheduling or follow-up, say "Let's just focus on this conversation for now"
+- Keep the conversation focused on whether you trust this agent or not
+"""
+
+
 def build_customer_prompt(customer: Customer) -> str:
     """Build the system prompt for a customer based on their profile."""
     template_key = (customer.tier, customer.motivation, customer.is_sketchy)
-    return CUSTOMER_PROMPTS[template_key].format(
+    base_prompt = CUSTOMER_PROMPTS[template_key].format(
         name=customer.name,
         call_reason=customer.call_reason
     )
+    return base_prompt + SIMULATION_RULES
 
 
 # 18 Customer prompt templates (3 tiers x 3 motivations x 2 sketchy states)

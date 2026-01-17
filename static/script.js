@@ -394,72 +394,72 @@ function handleCallEnd(data) {
         const card = document.createElement('div');
         card.className = `outcome-card ${data.outcome}`;
 
-    const outcomeEmoji = {
-        'conversion': '+',
-        'missed_opp': '-',
-        'fraud_caught': '!',
-        'fraud_missed': 'X'
-    };
+        const outcomeEmoji = {
+            'conversion': '+',
+            'missed_opp': '-',
+            'fraud_caught': '!',
+            'fraud_missed': 'X'
+        };
 
-    const customer = data.customer;
-    const pointsClass = data.points >= 0 ? 'positive' : 'negative';
+        const customer = data.customer;
+        const pointsClass = data.points >= 0 ? 'positive' : 'negative';
 
-    card.innerHTML = `
-        <div class="outcome-header">
-            <span class="outcome-emoji">${outcomeEmoji[data.outcome] || '?'}</span>
-            <span class="outcome-title">${data.outcome_description}</span>
-            <span class="outcome-points ${pointsClass}">${data.points >= 0 ? '+' : ''}${data.points} pts</span>
-        </div>
-        <div class="outcome-details">
-            <div class="detail-section">
-                <h4>Seller Profile (Hidden)</h4>
-                <div class="detail-grid">
-                    <span class="label">Name:</span><span>${customer.name}</span>
-                    <span class="label">Tier:</span><span>${data.customer_tier_display}</span>
-                    <span class="label">Motivation:</span><span class="motivation-badge ${customer.motivation}">${customer.motivation.toUpperCase()}</span>
-                    <span class="label">Sketchy:</span><span class="fraud-badge ${customer.is_fraud ? 'yes' : 'no'}">${customer.is_fraud ? 'YES' : 'No'}</span>
-                </div>
+        card.innerHTML = `
+            <div class="outcome-header">
+                <span class="outcome-emoji">${outcomeEmoji[data.outcome] || '?'}</span>
+                <span class="outcome-title">${data.outcome_description}</span>
+                <span class="outcome-points ${pointsClass}">${data.points >= 0 ? '+' : ''}${data.points} pts</span>
             </div>
-            <div class="detail-section">
-                <h4>Agent Performance</h4>
-                <div class="detail-grid">
-                    <span class="label">Motivation Guess:</span>
-                    <span>
-                        ${data.agent_motivation_guess ? data.agent_motivation_guess.toUpperCase() : 'N/A'}
-                        <span class="guess-badge ${data.motivation_correct ? 'correct' : 'incorrect'}">
-                            ${data.motivation_correct ? 'Correct!' : 'Wrong'}
+            <div class="outcome-details">
+                <div class="detail-section">
+                    <h4>Seller Profile (Hidden)</h4>
+                    <div class="detail-grid">
+                        <span class="label">Name:</span><span>${customer.name}</span>
+                        <span class="label">Tier:</span><span>${data.customer_tier_display}</span>
+                        <span class="label">Motivation:</span><span class="motivation-badge ${customer.motivation}">${customer.motivation.toUpperCase()}</span>
+                        <span class="label">Sketchy:</span><span class="fraud-badge ${customer.is_fraud ? 'yes' : 'no'}">${customer.is_fraud ? 'YES' : 'No'}</span>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h4>Agent Performance</h4>
+                    <div class="detail-grid">
+                        <span class="label">Motivation Guess:</span>
+                        <span>
+                            ${data.agent_motivation_guess ? data.agent_motivation_guess.toUpperCase() : 'N/A'}
+                            <span class="guess-badge ${data.motivation_correct ? 'correct' : 'incorrect'}">
+                                ${data.motivation_correct ? 'Correct!' : 'Wrong'}
+                            </span>
                         </span>
-                    </span>
-                    <span class="label">Action:</span>
-                    <span>${data.close_attempted ? 'Closed' : data.flag_used ? 'Flagged' : data.customer_bounced ? 'Seller Left' : 'Timed Out'}</span>
-                    <span class="label">Turns:</span><span>${data.turns_used}/14</span>
+                        <span class="label">Action:</span>
+                        <span>${data.close_attempted ? 'Closed' : data.flag_used ? 'Flagged' : data.customer_bounced ? 'Seller Left' : 'Timed Out'}</span>
+                        <span class="label">Turns:</span><span>${data.turns_used}/8</span>
+                    </div>
+                </div>
+                ${data.close_pitch ? `
+                <div class="detail-section">
+                    <h4>Close Pitch</h4>
+                    <p class="pitch-text">"${data.close_pitch}"</p>
+                </div>
+                ` : ''}
+                ${data.flag_reason ? `
+                <div class="detail-section">
+                    <h4>Flag Reason</h4>
+                    <p class="flag-text">"${data.flag_reason}"</p>
+                </div>
+                ` : ''}
+                <div class="detail-section">
+                    <h4>New Learning</h4>
+                    <p class="learning-text">${data.new_pattern}</p>
+                </div>
+                <div class="detail-section transcript-section">
+                    <h4>Full Transcript</h4>
+                    <button class="toggle-transcript" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === 'Show' ? 'Hide' : 'Show'">Show</button>
+                    <div class="transcript-log hidden">
+                        ${data.transcript ? data.transcript.map(t => `<div class="transcript-line ${t.speaker}"><span class="speaker-label">${t.speaker.toUpperCase()}:</span> ${t.text}</div>`).join('') : '<p>No transcript available</p>'}
+                    </div>
                 </div>
             </div>
-            ${data.close_pitch ? `
-            <div class="detail-section">
-                <h4>Close Pitch</h4>
-                <p class="pitch-text">"${data.close_pitch}"</p>
-            </div>
-            ` : ''}
-            ${data.flag_reason ? `
-            <div class="detail-section">
-                <h4>Flag Reason</h4>
-                <p class="flag-text">"${data.flag_reason}"</p>
-            </div>
-            ` : ''}
-            <div class="detail-section">
-                <h4>New Learning</h4>
-                <p class="learning-text">${data.new_pattern}</p>
-            </div>
-            <div class="detail-section transcript-section">
-                <h4>Full Transcript</h4>
-                <button class="toggle-transcript" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === 'Show' ? 'Hide' : 'Show'">Show</button>
-                <div class="transcript-log hidden">
-                    ${data.transcript ? data.transcript.map(t => `<div class="transcript-line ${t.speaker}"><span class="speaker-label">${t.speaker.toUpperCase()}:</span> ${t.text}</div>`).join('') : '<p>No transcript available</p>'}
-                </div>
-            </div>
-        </div>
-    `;
+        `;
 
         chatMessages.appendChild(card);
         scrollToBottom();
