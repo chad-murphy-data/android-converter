@@ -413,15 +413,15 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         dominant_motivation = get_dominant_motivation(confidence.get("motivation_guess", {}))
         state.agent_motivation_guess = dominant_motivation
 
-        if state.close_attempted and not customer.is_fraud:
+        if state.close_attempted and not customer.is_sketchy:
             # Check if they would convert
             matched = dominant_motivation == customer.motivation
-            converted = will_convert(state.sentiment, matched, customer.is_fraud)
+            converted = will_convert(state.sentiment, matched, customer.is_sketchy)
 
         outcome = determine_outcome(
             close_attempted=state.close_attempted,
             flag_used=state.flag_used,
-            is_fraud=customer.is_fraud,
+            is_fraud=customer.is_sketchy,
             converted=converted,
             customer_bounced=state.customer_bounced
         )
@@ -436,7 +436,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             customer_tier=customer.tier,
             agent_motivation_guess=state.agent_motivation_guess or "unknown",
             guess_was_correct=motivation_correct,
-            was_fraud=customer.is_fraud,
+            was_fraud=customer.is_sketchy,
             outcome=outcome
         )
         new_pattern = await generate_learning(client, learning_prompt)
@@ -449,7 +449,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             "call_id": call_id,
             "customer_tier": customer.tier,
             "customer_motivation": customer.motivation,
-            "was_fraud": customer.is_fraud,
+            "was_fraud": customer.is_sketchy,
             "outcome": outcome,
             "points": points,
             "turns": state.turn

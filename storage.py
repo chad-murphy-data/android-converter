@@ -296,6 +296,9 @@ def get_leaderboard() -> list:
     leaderboard = []
 
     for style, state in all_states.items():
+        # Skip invalid entries (not dicts)
+        if not isinstance(state, dict):
+            continue
         if state.get("total_calls", 0) > 0:
             leaderboard.append({
                 "style": state["style"],
