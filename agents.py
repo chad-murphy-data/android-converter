@@ -335,6 +335,74 @@ Current turn: {turn_count}
 """
 
 
+# Archetypes that get perfect hindsight (formal training/investigation style)
+HINDSIGHT_ARCHETYPES = {"robot", "detective"}
+
+
+def summarize_transcript_for_learning(transcript: list) -> str:
+    """Create a brief summary of key moments from the transcript.
+
+    Args:
+        transcript: List of transcript entries with speaker/text/turn
+
+    Returns:
+        Brief summary of notable customer behaviors
+    """
+    if not transcript:
+        return "No transcript available."
+
+    # Extract just customer messages
+    customer_msgs = [t["text"] for t in transcript if t.get("speaker") == "customer"]
+
+    if not customer_msgs:
+        return "Customer said very little."
+
+    # Build a brief summary
+    summary_parts = []
+
+    # Check for impatience/urgency signals
+    urgency_phrases = ["how fast", "how long", "quickly", "speed", "don't have time", "gotta go", "hurry"]
+    for msg in customer_msgs:
+        msg_lower = msg.lower()
+        if any(phrase in msg_lower for phrase in urgency_phrases):
+            summary_parts.append("Customer asked about speed/timing")
+            break
+
+    # Check for data/analysis requests
+    data_phrases = ["numbers", "data", "comps", "statistics", "market analysis", "what's the market"]
+    for msg in customer_msgs:
+        msg_lower = msg.lower()
+        if any(phrase in msg_lower for phrase in data_phrases):
+            summary_parts.append("Customer asked for data/analysis")
+            break
+
+    # Check for emotional/personal content
+    emotion_phrases = ["feel", "trust", "comfortable", "worried", "scared", "love", "hate", "frustrated"]
+    for msg in customer_msgs:
+        msg_lower = msg.lower()
+        if any(phrase in msg_lower for phrase in emotion_phrases):
+            summary_parts.append("Customer expressed emotions/feelings")
+            break
+
+    # Check for short responses (HAND signal)
+    short_responses = [msg for msg in customer_msgs if len(msg.split()) < 15]
+    if len(short_responses) > len(customer_msgs) / 2:
+        summary_parts.append("Customer gave mostly short, direct responses")
+
+    # Check for frustration
+    frustration_phrases = ["losing me", "speed this up", "get to the point", "don't have all day", "taking too long"]
+    for msg in customer_msgs:
+        msg_lower = msg.lower()
+        if any(phrase in msg_lower for phrase in frustration_phrases):
+            summary_parts.append("Customer showed signs of frustration/impatience")
+            break
+
+    if not summary_parts:
+        summary_parts.append("Customer engaged in standard conversation")
+
+    return ". ".join(summary_parts) + "."
+
+
 def get_post_call_learning_prompt(
     agent: Agent,
     customer_tier: str,
@@ -342,7 +410,8 @@ def get_post_call_learning_prompt(
     actual_motivation: str,
     guess_was_correct: bool,
     was_fraud: bool,
-    outcome: str
+    outcome: str,
+    transcript: list = None
 ) -> str:
     """Build prompt for generating post-call learning.
 
@@ -354,6 +423,7 @@ def get_post_call_learning_prompt(
         guess_was_correct: Whether the agent's guess matched reality
         was_fraud: Whether customer was actually sketchy
         outcome: Call outcome
+        transcript: Optional transcript for grounding the learning
 
     Returns:
         Prompt for learning generation
@@ -365,10 +435,18 @@ def get_post_call_learning_prompt(
         "estate": "Estate ($10M)"
     }.get(customer_tier, customer_tier)
 
-    if guess_was_correct:
-        read_summary = f"You correctly read them as {agent_motivation_guess.upper()}"
+    # Different learning styles based on archetype
+    has_hindsight = agent.style in HINDSIGHT_ARCHETYPES
+
+    if has_hindsight:
+        # Robot and Detective get perfect hindsight
+        if guess_was_correct:
+            read_summary = f"You correctly read them as {agent_motivation_guess.upper()}"
+        else:
+            read_summary = f"You thought they were {agent_motivation_guess.upper()}, but they were actually {actual_motivation.upper()}"
     else:
-        read_summary = f"You thought they were {agent_motivation_guess.upper()}, but they were actually {actual_motivation.upper()}"
+        # Closer, Empath, Gambler only know their own read
+        read_summary = f"You read them as {agent_motivation_guess.upper()}"
 
     # Outcome-specific context
     if outcome == "missed_opp":
@@ -382,6 +460,33 @@ def get_post_call_learning_prompt(
     else:
         outcome_context = f"Outcome: {outcome}"
 
+    # Get transcript summary to ground the learning
+    transcript_summary = summarize_transcript_for_learning(transcript or [])
+
+    # Different prompts based on learning style
+    if has_hindsight:
+        learning_instructions = """The learning should be:
+- Specific and actionable
+- If you misread the client, focus on what signals you missed
+- If you read them correctly but still lost, focus on what went wrong in your approach
+
+Examples of good learnings:
+- "HAND clients who ask 'how fast' need action, not analysis - close quickly"
+- "Misread HAND as HEAD - watch for impatience and short responses"
+- "Long explanations frustrate HAND clients - keep it brief"
+- "HEART clients need connection before business talk\""""
+    else:
+        learning_instructions = """The learning should be:
+- Based ONLY on what you observed (you don't know if your read was correct)
+- Grounded in specific customer behaviors from the call
+- A hypothesis about what might work better next time
+
+Examples of good learnings:
+- "Customer asked 'how fast' repeatedly - next time close faster with urgency-focused clients"
+- "Lost a client who gave short responses - try matching their brevity"
+- "Client seemed frustrated by my questions - maybe probe less, act more"
+- "Emotional language early in call - should have connected personally first\""""
+
     return f"""You just finished a call. Analyze what happened and extract ONE actionable learning.
 
 CALL DETAILS:
@@ -391,18 +496,12 @@ CALL DETAILS:
 - {outcome_context}
 - Your style: {agent.style}
 
+WHAT HAPPENED ON THE CALL:
+{transcript_summary}
+
 Based on this call, write ONE brief learning (under 15 words) that would help you in future calls.
 
-The learning should be:
-- Specific and actionable
-- If you misread the client, focus on what signals you missed
-- If you read them correctly but still lost, focus on what went wrong in your approach
-
-Examples of good learnings:
-- "HAND clients who ask 'how fast' need action, not analysis - close quickly"
-- "Misread HAND as HEAD - watch for impatience and short responses"
-- "Long explanations frustrate HAND clients - keep it brief"
-- "HEART clients need connection before business talk"
+{learning_instructions}
 
 Respond with ONLY the learning, nothing else."""
 

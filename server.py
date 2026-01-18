@@ -479,7 +479,8 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         motivation_correct = state.agent_motivation_guess == customer.motivation
         points = calculate_score(customer.tier, outcome, motivation_correct)
 
-        # Generate learning (includes both agent's read AND actual motivation for accurate learning)
+        # Generate learning (includes transcript summary for grounding)
+        # Robot and Detective get perfect hindsight; others learn from observation only
         learning_prompt = get_post_call_learning_prompt(
             agent=agent,
             customer_tier=customer.tier,
@@ -487,7 +488,8 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             actual_motivation=customer.motivation,
             guess_was_correct=motivation_correct,
             was_fraud=customer.is_sketchy,
-            outcome=outcome
+            outcome=outcome,
+            transcript=state.transcript
         )
         new_pattern = await generate_learning(client, learning_prompt)
 
