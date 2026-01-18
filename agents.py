@@ -339,6 +339,7 @@ def get_post_call_learning_prompt(
     agent: Agent,
     customer_tier: str,
     agent_motivation_guess: str,
+    actual_motivation: str,
     guess_was_correct: bool,
     was_fraud: bool,
     outcome: str
@@ -349,6 +350,7 @@ def get_post_call_learning_prompt(
         agent: Agent profile
         customer_tier: Customer tier (starter, luxury, estate)
         agent_motivation_guess: What the agent thought the motivation was
+        actual_motivation: What the customer actually was
         guess_was_correct: Whether the agent's guess matched reality
         was_fraud: Whether customer was actually sketchy
         outcome: Call outcome
@@ -356,8 +358,6 @@ def get_post_call_learning_prompt(
     Returns:
         Prompt for learning generation
     """
-    guess_result = "CORRECT" if guess_was_correct else "WRONG"
-
     # Map tier names for display
     tier_display = {
         "starter": "Starter ($350K)",
@@ -365,26 +365,44 @@ def get_post_call_learning_prompt(
         "estate": "Estate ($10M)"
     }.get(customer_tier, customer_tier)
 
+    if guess_was_correct:
+        read_summary = f"You correctly read them as {agent_motivation_guess.upper()}"
+    else:
+        read_summary = f"You thought they were {agent_motivation_guess.upper()}, but they were actually {actual_motivation.upper()}"
+
+    # Outcome-specific context
+    if outcome == "missed_opp":
+        outcome_context = "The customer left without signing - you lost the deal."
+    elif outcome == "conversion":
+        outcome_context = "The customer signed - you won the deal."
+    elif outcome == "fraud_caught":
+        outcome_context = "You correctly flagged a sketchy situation."
+    elif outcome == "fraud_missed":
+        outcome_context = "You missed red flags and took on a problematic listing."
+    else:
+        outcome_context = f"Outcome: {outcome}"
+
     return f"""You just finished a call. Analyze what happened and extract ONE actionable learning.
 
 CALL DETAILS:
 - Property tier: {tier_display}
-- You read them as: {agent_motivation_guess} ({guess_result})
+- {read_summary}
 - Was sketchy: {was_fraud}
-- Outcome: {outcome}
+- {outcome_context}
 - Your style: {agent.style}
 
 Based on this call, write ONE brief learning (under 15 words) that would help you in future calls.
 
 The learning should be:
 - Specific and actionable
-- Based on YOUR read of the client (you thought they were {agent_motivation_guess})
-- Useful for identifying similar situations
+- If you misread the client, focus on what signals you missed
+- If you read them correctly but still lost, focus on what went wrong in your approach
 
 Examples of good learnings:
-- "Heart + estate + vague authority = verify before committing"
-- "My head reads need specific market data before closing"
-- "Rushing to close on hand reads backfires with luxury properties"
+- "HAND clients who ask 'how fast' need action, not analysis - close quickly"
+- "Misread HAND as HEAD - watch for impatience and short responses"
+- "Long explanations frustrate HAND clients - keep it brief"
+- "HEART clients need connection before business talk"
 
 Respond with ONLY the learning, nothing else."""
 

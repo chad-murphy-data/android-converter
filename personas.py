@@ -174,6 +174,18 @@ PACING - BE READY TO DECIDE:
 - After 3-4 exchanges, you should have a sense of whether this agent is right for you.
 - If the agent asks for your business and they've been competent, say YES.
 - Don't keep asking questions just to delay - make a decision when asked.
+
+FRUSTRATION EXPRESSION - SHOW YOUR FEELINGS:
+- If the agent isn't matching your communication style, let it show in your tone
+- If you're getting frustrated, express it BEFORE you hang up - give them a warning
+- Examples of showing frustration:
+  - "Look, I don't have all day for this..."
+  - "Can we speed this up?"
+  - "I'm starting to wonder if this is going anywhere..."
+  - "You're losing me here..."
+  - "I need you to get to the point."
+- Your frustration should escalate gradually - don't go from happy to hanging up instantly
+- Give them at least one warning that you're losing patience before you leave
 """
 
 
