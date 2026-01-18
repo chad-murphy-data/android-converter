@@ -4,6 +4,7 @@ let ws = null;
 let warmupMode = false;
 let currentFraudRisk = 2; // Track sketchy risk for alert bubble
 let currentAgentStyle = null; // Track current agent style for avatar images
+let currentCustomerMotivation = null; // Track actual customer motivation for sidebar highlight
 
 // DOM Elements
 const chatMessages = document.getElementById('chat-messages');
@@ -25,8 +26,8 @@ const agentName = agentBadge.querySelector('.agent-name');
 const agentStyle = agentBadge.querySelector('.agent-style');
 
 // Dashboard elements
-const fraudRiskBar = document.getElementById('fraud-risk-bar');
-const fraudRiskValue = document.getElementById('fraud-risk-value');
+const confidenceBar = document.getElementById('confidence-bar');
+const confidenceValue = document.getElementById('confidence-value');
 const headBar = document.getElementById('head-bar');
 const headValue = document.getElementById('head-value');
 const heartBar = document.getElementById('heart-bar');
@@ -154,6 +155,10 @@ function handleCallStart(data) {
 
     // Add customer info peek (hidden by default)
     if (data.customer_preview) {
+        // Store customer motivation for sidebar highlighting
+        currentCustomerMotivation = data.customer_preview.motivation;
+        highlightCorrectMotivation(currentCustomerMotivation);
+
         const customerPeek = document.createElement('div');
         customerPeek.className = 'customer-info-peek';
         customerPeek.innerHTML = `
@@ -176,6 +181,16 @@ function handleCallStart(data) {
     }
 
     scrollToBottom();
+}
+
+// Highlight the correct motivation in the sidebar
+function highlightCorrectMotivation(motivation) {
+    document.querySelectorAll('.motivation-item').forEach(item => {
+        item.classList.remove('correct-answer');
+        if (item.dataset.motivation === motivation) {
+            item.classList.add('correct-answer');
+        }
+    });
 }
 
 // Toggle customer info visibility
@@ -295,12 +310,14 @@ function updateDashboard(data) {
         turnCount.textContent = turn;
     }
 
-    // Update fraud risk
-    const fraudRisk = confidence.fraud_likelihood || 5;
-    currentFraudRisk = fraudRisk; // Store for alert bubble
-    fraudRiskBar.style.width = `${fraudRisk * 10}%`;
-    fraudRiskValue.textContent = `${fraudRisk}/10`;
-    fraudRiskBar.className = `metric-fill fraud-fill ${fraudRisk >= 7 ? 'high' : fraudRisk >= 4 ? 'medium' : 'low'}`;
+    // Update closing confidence (derived from likelihood to convert and trust)
+    const closingConf = confidence.closing_confidence || sentiment.likelihood_to_convert || 5;
+    confidenceBar.style.width = `${closingConf * 10}%`;
+    confidenceValue.textContent = `${closingConf}/10`;
+    confidenceBar.className = `metric-fill confidence-fill ${closingConf >= 7 ? 'high' : closingConf >= 4 ? 'medium' : 'low'}`;
+
+    // Store fraud risk for alert bubble (still tracked even if not displayed)
+    currentFraudRisk = confidence.fraud_likelihood || 2;
 
     // Update motivation guess
     const motivation = confidence.motivation_guess || { head: 33, heart: 34, hand: 33 };
@@ -376,10 +393,13 @@ function getToneClass(tone) {
 
 // Reset dashboard to initial state (neutral priors - no assumptions)
 function resetDashboard() {
-    // Start with low fraud assumption
-    fraudRiskBar.style.width = '20%';
-    fraudRiskValue.textContent = '2/10';
-    fraudRiskBar.className = 'metric-fill fraud-fill low';
+    // Start with neutral closing confidence
+    confidenceBar.style.width = '50%';
+    confidenceValue.textContent = '5/10';
+    confidenceBar.className = 'metric-fill confidence-fill medium';
+
+    // Reset customer motivation tracking
+    currentCustomerMotivation = null;
 
     // Equal probability for all motivations (true neutral)
     headBar.style.width = '33%';
@@ -389,9 +409,10 @@ function resetDashboard() {
     handBar.style.width = '33%';
     handValue.textContent = '33%';
 
-    // Remove any dominant highlighting
+    // Remove any dominant or correct-answer highlighting
     document.querySelectorAll('.motivation-item').forEach(item => {
         item.classList.remove('dominant');
+        item.classList.remove('correct-answer');
     });
 
     reasoningText.textContent = 'Waiting for conversation to begin...';

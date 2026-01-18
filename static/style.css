@@ -629,6 +629,15 @@ header .subtitle {
 .metric-fill.fraud-fill.medium { background: #f39c12; }
 .metric-fill.fraud-fill.high { background: #e74c3c; }
 
+/* Closing confidence bar */
+.metric-fill.confidence-fill {
+    background: #3498db;
+}
+
+.metric-fill.confidence-fill.low { background: #e74c3c; }
+.metric-fill.confidence-fill.medium { background: #f39c12; }
+.metric-fill.confidence-fill.high { background: #2ecc71; }
+
 .metric-value {
     font-size: 0.85rem;
     font-weight: 600;
@@ -659,6 +668,17 @@ header .subtitle {
 
 .motivation-item.dominant {
     background: rgba(255, 255, 255, 0.1);
+}
+
+/* Highlight for the ACTUAL correct motivation (answer key) */
+.motivation-item.correct-answer {
+    border-left: 3px solid #2ecc71;
+    padding-left: 5px;
+}
+
+.motivation-item.correct-answer .motivation-label {
+    color: #2ecc71;
+    opacity: 1;
 }
 
 .motivation-label {

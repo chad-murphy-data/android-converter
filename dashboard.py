@@ -11,13 +11,13 @@ Agent: {agent_msg}
 Caller: {caller_msg}
 
 Based on this exchange, assess:
-1. Sketchy likelihood (1-10, where 10 = definitely a problematic situation)
+1. Closing confidence (1-10): How confident is the agent that they can successfully close this deal?
 2. Customer motivation type (head/heart/hand percentages that sum to 100)
 3. Brief reasoning (one sentence)
 
 Respond in JSON format only:
 {{
-    "fraud_likelihood": <1-10>,
+    "closing_confidence": <1-10>,
     "motivation_guess": {{
         "head": <0-100>,
         "heart": <0-100>,
@@ -92,7 +92,8 @@ async def get_agent_confidence(
 
         # Ensure expected structure
         return {
-            "fraud_likelihood": result.get("fraud_likelihood", 5),
+            "closing_confidence": result.get("closing_confidence", 5),
+            "fraud_likelihood": result.get("fraud_likelihood", 2),  # Keep for backward compat
             "motivation_guess": result.get("motivation_guess", {
                 "head": 33,
                 "heart": 34,
@@ -105,14 +106,16 @@ async def get_agent_confidence(
         print(f"Confidence parse error: {e}")
         # Return neutral defaults on parse error
         return {
-            "fraud_likelihood": 5,
+            "closing_confidence": 5,
+            "fraud_likelihood": 2,
             "motivation_guess": {"head": 33, "heart": 34, "hand": 33},
             "reasoning": "Analysis in progress..."
         }
     except Exception as e:
         print(f"Confidence call error: {e}")
         return {
-            "fraud_likelihood": 5,
+            "closing_confidence": 5,
+            "fraud_likelihood": 2,
             "motivation_guess": {"head": 33, "heart": 34, "hand": 33},
             "reasoning": "Analysis in progress..."
         }
