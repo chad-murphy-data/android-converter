@@ -22,6 +22,7 @@ const gamblerPoints = document.getElementById('gambler-points');
 // Agent badge elements
 const agentBadge = document.getElementById('agent-badge');
 const agentIcon = agentBadge.querySelector('.agent-icon');
+const agentAvatarImg = document.getElementById('agent-avatar-img');
 const agentName = agentBadge.querySelector('.agent-name');
 const agentStyle = agentBadge.querySelector('.agent-style');
 
@@ -135,8 +136,13 @@ function handleCallStart(data) {
     const agent = data.agent;
     const agentInfo = data.agent_info;
     currentAgentStyle = agent.style; // Store for avatar images
-    agentIcon.textContent = AGENT_ICONS[agent.style] || '?';
-    agentIcon.className = `agent-icon ${agent.style}`;
+
+    // Show avatar image, hide letter icon
+    agentAvatarImg.src = `/avatars/${agent.style}.png`;
+    agentAvatarImg.alt = agent.style;
+    agentAvatarImg.style.display = 'block';
+    agentIcon.style.display = 'none';
+
     agentName.textContent = agent.name;
     agentStyle.textContent = agentInfo.display_name;
 

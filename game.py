@@ -232,6 +232,12 @@ def check_customer_bounce(
     # Check sentiment frustration (from LLM analysis)
     sentiment_frustration = state.sentiment.get("frustration", 0)
 
+    # IMPORTANT: Only bounce if sentiment shows frustration
+    # This prevents abrupt bounces when the customer seemed engaged
+    # The LLM sentiment must show frustration >= 6 to even consider bouncing
+    if sentiment_frustration < 6:
+        return False
+
     # Use max of tracked frustration and sentiment frustration
     effective_frustration = max(state.frustration, sentiment_frustration)
 

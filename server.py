@@ -328,7 +328,13 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
             # Check if customer said yes (converted)
             customer_lower = customer_text.lower()
-            if any(phrase in customer_lower for phrase in ["yes", "let's do", "i'm in", "let's work", "sounds good", "i'll sign", "let's move forward"]):
+            yes_phrases = [
+                "yes", "let's do", "i'm in", "let's work", "sounds good",
+                "i'll sign", "let's move forward", "i'm ready", "ready to",
+                "let's go", "deal", "you got it", "absolutely", "definitely",
+                "i accept", "count me in", "sign me up", "work together"
+            ]
+            if any(phrase in customer_lower for phrase in yes_phrases):
                 state.converted_on_close = True
 
             await websocket.send_json({

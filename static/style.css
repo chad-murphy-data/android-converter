@@ -82,6 +82,15 @@ header .subtitle {
     color: white;
 }
 
+/* Full agent avatar image in header */
+.agent-avatar-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
 .agent-icon.closer { background: #e74c3c; }
 .agent-icon.detective { background: #3498db; }
 .agent-icon.empath { background: #9b59b6; }
