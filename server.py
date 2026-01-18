@@ -157,12 +157,19 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     # Build prompts
     customer_prompt = build_customer_prompt(customer)
 
-    # Send call start info
+    # Send call start info (includes customer preview for optional peek)
     await websocket.send_json({
         "type": "call_start",
         "call_id": call_id,
         "agent": agent.to_dict(),
         "agent_info": get_archetype_info(agent.style),
+        "customer_preview": {
+            "name": customer.name,
+            "tier": customer.tier,
+            "tier_display": get_tier_display(customer.tier),
+            "motivation": customer.motivation,
+            "call_reason": customer.call_reason
+        },
         "warmup_mode": warmup_mode
     })
 

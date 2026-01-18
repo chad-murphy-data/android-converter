@@ -152,7 +152,37 @@ function handleCallStart(data) {
     `;
     chatMessages.appendChild(divider);
 
+    // Add customer info peek (hidden by default)
+    if (data.customer_preview) {
+        const customerPeek = document.createElement('div');
+        customerPeek.className = 'customer-info-peek';
+        customerPeek.innerHTML = `
+            <button class="customer-info-toggle" onclick="toggleCustomerInfo(this)">
+                <span>Peek at Customer Info</span>
+                <span class="toggle-icon">&#9660;</span>
+            </button>
+            <div class="customer-info-details">
+                <div class="customer-info-grid">
+                    <span class="label">Name:</span>
+                    <span class="value">${data.customer_preview.name}</span>
+                    <span class="label">Tier:</span>
+                    <span class="value"><span class="tier-badge ${data.customer_preview.tier}">${data.customer_preview.tier_display}</span></span>
+                    <span class="label">Motivation:</span>
+                    <span class="value motivation-badge ${data.customer_preview.motivation}">${data.customer_preview.motivation.toUpperCase()}</span>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(customerPeek);
+    }
+
     scrollToBottom();
+}
+
+// Toggle customer info visibility
+function toggleCustomerInfo(button) {
+    button.classList.toggle('expanded');
+    const details = button.nextElementSibling;
+    details.classList.toggle('expanded');
 }
 
 // Add a message bubble
