@@ -161,23 +161,21 @@ body::before {
     background: #2a2a5a;
 }
 
-.customer-silhouette {
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    border: 6px solid #FF6B6B;
-    background: linear-gradient(135deg, #3a3a6a, #2a2a5a);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 30px rgba(255, 107, 107, 0.5), 0 10px 30px rgba(0,0,0,0.3);
+/* Customer character images - border color based on motivation */
+.customer-panel .character-image {
+    border-color: #FF6B6B; /* Default pink */
 }
 
-.silhouette-icon {
-    font-family: 'Bangers', cursive;
-    font-size: 4rem;
-    color: #FF6B6B;
-    text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+.customer-panel .character-image.head {
+    border-color: #4ECDC4; /* Teal for HEAD */
+}
+
+.customer-panel .character-image.heart {
+    border-color: #FF8FB1; /* Pink for HEART */
+}
+
+.customer-panel .character-image.hand {
+    border-color: #FFE66D; /* Yellow for HAND */
 }
 
 .character-name-plate {
@@ -675,44 +673,73 @@ body::before {
     color: #69DB7C;
 }
 
-/* ===== DANGER OVERLAY ===== */
-.danger-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 82, 82, 0.15);
-    display: flex;
+/* ===== SPICY INDICATOR ===== */
+.spicy-indicator {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
     align-items: center;
-    justify-content: center;
-    z-index: 500;
-    pointer-events: none;
-    animation: danger-flash 0.5s ease-in-out infinite;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 82, 82, 0.15);
+    border: 1px solid rgba(255, 82, 82, 0.4);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #FF6B6B;
+    backdrop-filter: blur(4px);
+    z-index: 50;
 }
 
-@keyframes danger-flash {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+.spicy-indicator.active {
+    display: flex;
 }
 
-@keyframes danger-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+/* Tiered vibration levels */
+.spicy-indicator.level-8 {
+    animation: spicy-shake-mild 0.8s ease-in-out infinite;
 }
 
-.danger-text {
-    font-family: 'Bangers', cursive;
-    font-size: 2.5rem;
-    color: #FF5252;
-    text-shadow: 0 0 20px rgba(255, 82, 82, 0.8), 3px 3px 0 #1a1a3a;
-    animation: shake 0.3s ease-in-out infinite;
+.spicy-indicator.level-9 {
+    animation: spicy-shake-medium 0.5s ease-in-out infinite;
+    background: rgba(255, 82, 82, 0.25);
+    border-color: rgba(255, 82, 82, 0.6);
 }
 
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
+.spicy-indicator.level-10 {
+    animation: spicy-shake-intense 0.3s ease-in-out infinite;
+    background: rgba(255, 82, 82, 0.35);
+    border-color: #FF5252;
+    font-weight: 700;
+}
+
+/* Mild shake - barely noticeable */
+@keyframes spicy-shake-mild {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-1px); }
+}
+
+/* Medium shake - noticeable but not distracting */
+@keyframes spicy-shake-medium {
+    0%, 100% { transform: translateX(-50%) translateX(0); }
+    25% { transform: translateX(-50%) translateX(-2px); }
+    75% { transform: translateX(-50%) translateX(2px); }
+}
+
+/* Intense shake - urgent but still readable */
+@keyframes spicy-shake-intense {
+    0%, 100% { transform: translateX(-50%) translateX(0) rotate(0deg); }
+    25% { transform: translateX(-50%) translateX(-3px) rotate(-1deg); }
+    75% { transform: translateX(-50%) translateX(3px) rotate(1deg); }
+}
+
+.spicy-icon {
+    font-size: 1rem;
+}
+
+.spicy-text {
+    font-weight: 600;
 }
 
 /* ===== CONTROLS ===== */
@@ -1210,8 +1237,7 @@ body::before {
         height: 150px;
     }
 
-    .character-image,
-    .customer-silhouette {
+    .character-image {
         width: 120px;
         height: 120px;
     }

@@ -6,6 +6,8 @@
     <title>Conversation Lab</title>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
     <div class="broadcast-container">
@@ -26,7 +28,7 @@
             <!-- Agent Side -->
             <div class="character-panel agent-panel">
                 <div class="character-frame agent-frame">
-                    <img id="agent-image" class="character-image" src="/avatars/robot.png" alt="Agent">
+                    <img id="agent-image" class="character-image" src="/static/characters/agent-adaptive-neutral.png" alt="Agent">
                     <div class="character-name-plate">
                         <span class="character-name" id="agent-name">???</span>
                         <span class="character-title" id="agent-title">Waiting...</span>
@@ -47,9 +49,7 @@
             <!-- Customer Side -->
             <div class="character-panel customer-panel">
                 <div class="character-frame customer-frame">
-                    <div class="customer-silhouette" id="customer-silhouette">
-                        <span class="silhouette-icon">?</span>
-                    </div>
+                    <img id="customer-image" class="character-image" src="/static/characters/customer-heart-neutral.png" alt="Customer">
                     <div class="character-name-plate">
                         <span class="character-name" id="customer-name">SELLER</span>
                         <span class="character-title" id="customer-title">Unknown</span>
@@ -59,6 +59,12 @@
                     <div class="bubble-content">...</div>
                     <div class="bubble-tail"></div>
                 </div>
+            </div>
+
+            <!-- Spicy Indicator (inside main stage) -->
+            <div class="spicy-indicator" id="spicy-indicator">
+                <span class="spicy-icon">🌶️</span>
+                <span class="spicy-text" id="spicy-text">Getting spicy...</span>
             </div>
         </div>
 
@@ -155,11 +161,6 @@
                 </div>
                 <span class="chyron-value" id="close-ready-value">5</span>
             </div>
-        </div>
-
-        <!-- Frustration Warning Overlay -->
-        <div class="danger-overlay" id="danger-overlay" style="display: none;">
-            <div class="danger-text">⚠️ SELLER GETTING SPICY ⚠️</div>
         </div>
 
         <!-- Controls -->

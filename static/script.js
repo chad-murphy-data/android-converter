@@ -1,19 +1,23 @@
-// Cartoon Broadcast UI - WebSocket connection and UI logic
+// Cartoon Broadcast UI v2 - Expression-switching with Anime.js animations
 
 let ws = null;
 let currentAgentStyle = null;
+let currentAgentType = null; // 'adaptive' or 'traditional'
 let currentCustomerMotivation = null;
+let currentAgentExpression = 'neutral';
+let currentCustomerExpression = 'neutral';
+let isAgentThinking = false;
 let transcript = [];
 
 // DOM Elements - Main Stage
 const agentImage = document.getElementById('agent-image');
+const customerImage = document.getElementById('customer-image');
 const agentName = document.getElementById('agent-name');
 const agentTitle = document.getElementById('agent-title');
 const agentBubble = document.getElementById('agent-bubble');
 const customerBubble = document.getElementById('customer-bubble');
 const customerName = document.getElementById('customer-name');
 const customerTitle = document.getElementById('customer-title');
-const customerSilhouette = document.getElementById('customer-silhouette');
 
 // DOM Elements - Header
 const turnCount = document.getElementById('turn-count');
@@ -43,7 +47,10 @@ const frustrationValue = document.getElementById('frustration-value');
 const closeReadyBar = document.getElementById('close-ready-bar');
 const closeReadyValue = document.getElementById('close-ready-value');
 const moodValue = document.getElementById('mood-value');
-const dangerOverlay = document.getElementById('danger-overlay');
+
+// DOM Elements - Spicy Indicator
+const spicyIndicator = document.getElementById('spicy-indicator');
+const spicyText = document.getElementById('spicy-text');
 
 // DOM Elements - Controls & Modals
 const startButton = document.getElementById('start-button');
@@ -60,14 +67,200 @@ const leaderboardContent = document.getElementById('leaderboard-content');
 
 // Flavor text arrays
 const THINKING_PREFIXES = ['Hmm...', 'Interesting...', 'My read:', 'Gut feeling:', 'Sensing that', 'Noticing', 'Wait...', 'Aha!'];
-const WARNING_TEXTS = [
-    "SELLER GETTING SPICY",
-    "PATIENCE LEVELS CRITICAL",
-    "THINGS ARE HEATING UP",
-    "ABORT? CONTINUE? ...GOOD LUCK"
-];
 
-// Connect to WebSocket
+// ===== EXPRESSION LOGIC =====
+
+// Map backend agent types to frontend character types
+function getAgentCharacterType(agentStyle) {
+    const adaptiveTypes = ['closer', 'empath', 'gambler'];
+    return adaptiveTypes.includes(agentStyle) ? 'adaptive' : 'traditional';
+}
+
+// Get agent expression based on confidence and sentiment
+function getAgentExpression(confidence, sentiment, isThinking) {
+    if (isThinking) {
+        return 'thinking';
+    }
+
+    const maxConfidence = Math.max(
+        confidence.motivation_guess?.head || 0,
+        confidence.motivation_guess?.heart || 0,
+        confidence.motivation_guess?.hand || 0
+    );
+
+    // High confidence + good sentiment = happy
+    if (maxConfidence >= 60 && sentiment.likelihood_to_convert >= 7) {
+        return 'happy';
+    }
+
+    // Customer frustrated = agent worried
+    if (sentiment.frustration >= 6) {
+        return 'worried';
+    }
+
+    // Low confidence = thinking
+    if (maxConfidence < 45) {
+        return 'thinking';
+    }
+
+    return 'neutral';
+}
+
+// Get customer expression based on motivation and sentiment
+function getCustomerExpression(motivation, sentiment) {
+    const frustration = sentiment.frustration || 5;
+    const satisfaction = sentiment.satisfaction || 5;
+    const trust = sentiment.trust || 5;
+
+    if (motivation === 'head') {
+        if (frustration >= 7) return 'frustrated';
+        if (satisfaction >= 7 && trust >= 6) return 'satisfied';
+        if (trust < 4 || satisfaction < 4) return 'skeptical';
+        return 'neutral';
+    }
+
+    if (motivation === 'heart') {
+        if (frustration >= 7) return 'upset';
+        if (satisfaction >= 7) return 'happy';
+        if (trust < 5) return 'uncertain';
+        return 'neutral';
+    }
+
+    if (motivation === 'hand') {
+        if (frustration >= 7) return 'frustrated';
+        if (satisfaction >= 7) return 'satisfied';
+        if (frustration >= 5) return 'impatient';
+        return 'neutral';
+    }
+
+    return 'neutral';
+}
+
+// Update agent image with expression
+function updateAgentExpression(expression) {
+    if (expression === currentAgentExpression) return;
+
+    const src = `/static/characters/agent-${currentAgentType}-${expression}.png`;
+
+    if (agentImage.src !== src) {
+        agentImage.src = src;
+        currentAgentExpression = expression;
+        animateExpressionChange(agentImage);
+    }
+}
+
+// Update customer image with expression
+function updateCustomerExpression(expression) {
+    if (expression === currentCustomerExpression || !currentCustomerMotivation) return;
+
+    const src = `/static/characters/customer-${currentCustomerMotivation}-${expression}.png`;
+
+    if (customerImage.src !== src) {
+        customerImage.src = src;
+        currentCustomerExpression = expression;
+        animateExpressionChange(customerImage);
+
+        // Update border color class
+        customerImage.className = `character-image ${currentCustomerMotivation}`;
+    }
+}
+
+// ===== ANIME.JS ANIMATIONS =====
+
+// Expression change pop animation
+function animateExpressionChange(element) {
+    anime({
+        targets: element,
+        scale: [0.85, 1.05, 1],
+        duration: 400,
+        easing: 'easeOutElastic(1, 0.5)'
+    });
+}
+
+// Speech bubble pop-in animation
+function animateBubblePop(bubbleElement) {
+    anime({
+        targets: bubbleElement,
+        scale: [0, 1.1, 1],
+        opacity: [0, 1],
+        duration: 350,
+        easing: 'easeOutBack'
+    });
+}
+
+// Meter fill animation
+function animateMeterFill(meterElement, targetWidth) {
+    anime({
+        targets: meterElement,
+        width: targetWidth + '%',
+        duration: 600,
+        easing: 'easeOutElastic(1, 0.6)'
+    });
+}
+
+// Score counting animation
+function animateScoreCount(element, targetValue) {
+    const obj = { value: 0 };
+    anime({
+        targets: obj,
+        value: targetValue,
+        duration: 1000,
+        round: 1,
+        easing: 'easeOutExpo',
+        update: () => {
+            const prefix = targetValue >= 0 ? '+' : '';
+            element.textContent = prefix + obj.value;
+        }
+    });
+}
+
+// Victory confetti celebration
+function celebrateConversion() {
+    if (typeof confetti === 'undefined') return;
+
+    confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+    });
+
+    setTimeout(() => {
+        confetti({
+            particleCount: 50,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+        });
+        confetti({
+            particleCount: 50,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+        });
+    }, 250);
+}
+
+// ===== SPICY INDICATOR =====
+
+function updateSpicyIndicator(frustration) {
+    // Remove all level classes
+    spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
+
+    if (frustration >= 10) {
+        spicyIndicator.classList.add('active', 'level-10');
+        spicyText.textContent = "Maximum spice!";
+    } else if (frustration >= 9) {
+        spicyIndicator.classList.add('active', 'level-9');
+        spicyText.textContent = "Things are heating up...";
+    } else if (frustration >= 8) {
+        spicyIndicator.classList.add('active', 'level-8');
+        spicyText.textContent = "Getting a little spicy";
+    }
+    // Below 8: hidden (no class added)
+}
+
+// ===== WEBSOCKET =====
+
 function connect() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
@@ -93,7 +286,6 @@ function connect() {
     };
 }
 
-// Handle incoming WebSocket messages
 function handleMessage(data) {
     console.log('Received message:', data.type, data);
     switch (data.type) {
@@ -122,23 +314,25 @@ function handleMessage(data) {
     }
 }
 
-// Handle call start
+// ===== CALL HANDLING =====
+
 function handleCallStart(data) {
     // Reset transcript
     transcript = [];
     logMessages.innerHTML = '';
-
-    // Reset turn counter
     turnCount.textContent = '0';
 
     // Update agent info
     const agent = data.agent;
     const agentInfo = data.agent_info;
     currentAgentStyle = agent.style;
+    currentAgentType = getAgentCharacterType(agent.style);
+    currentAgentExpression = 'neutral';
 
-    agentImage.src = `/avatars/${agent.style}.png`;
+    // Set agent character image
+    agentImage.src = `/static/characters/agent-${currentAgentType}-neutral.png`;
     agentName.textContent = agent.name;
-    agentTitle.textContent = agentInfo.display_name;
+    agentTitle.textContent = currentAgentType === 'adaptive' ? 'Adaptive' : 'Traditional';
 
     // Reset agent bubble
     setBubbleContent('agent', 'Waiting for call...');
@@ -146,6 +340,7 @@ function handleCallStart(data) {
     // Show intel box with customer info (spectator mode)
     if (data.customer_preview) {
         currentCustomerMotivation = data.customer_preview.motivation;
+        currentCustomerExpression = 'neutral';
 
         intelName.textContent = data.customer_preview.name;
         intelTier.textContent = data.customer_preview.tier_display;
@@ -153,6 +348,14 @@ function handleCallStart(data) {
         intelMotivation.className = `intel-value motivation-badge ${data.customer_preview.motivation}`;
 
         intelBox.style.display = 'block';
+
+        // Set customer character image based on motivation
+        customerImage.src = `/static/characters/customer-${currentCustomerMotivation}-neutral.png`;
+        customerImage.className = `character-image ${currentCustomerMotivation}`;
+
+        // Update customer name plate
+        const motivationLabels = { head: 'Analytical', heart: 'Emotional', hand: 'Pragmatic' };
+        customerTitle.textContent = motivationLabels[currentCustomerMotivation] || 'Unknown';
 
         // Highlight correct motivation in psychograph
         highlightCorrectMotivation(currentCustomerMotivation);
@@ -163,11 +366,9 @@ function handleCallStart(data) {
 
     // Reset customer display
     customerName.textContent = 'SELLER';
-    customerTitle.textContent = 'Unknown';
     setBubbleContent('customer', '...');
 }
 
-// Set speech bubble content
 function setBubbleContent(speaker, text, isTyping = false) {
     const bubble = speaker === 'agent' ? agentBubble : customerBubble;
     const content = bubble.querySelector('.bubble-content');
@@ -179,23 +380,34 @@ function setBubbleContent(speaker, text, isTyping = false) {
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
         `;
+
+        // Set agent to thinking expression while typing
+        if (speaker === 'agent') {
+            isAgentThinking = true;
+            updateAgentExpression('thinking');
+        }
     } else {
         bubble.classList.remove('typing');
         content.textContent = text;
+
+        // Clear thinking state
+        if (speaker === 'agent') {
+            isAgentThinking = false;
+        }
+
+        // Animate bubble pop
+        animateBubblePop(bubble);
     }
 }
 
-// Show typing indicator
 function showTypingIndicator(speaker) {
     setBubbleContent(speaker, '', true);
 }
 
-// Hide typing indicator
 function hideTypingIndicator(speaker) {
     // Will be replaced by actual message
 }
 
-// Add message to transcript and update UI
 function addMessage(speaker, text, isBounce = false, isEnd = false) {
     // Update speech bubble
     if (speaker !== 'system') {
@@ -218,15 +430,20 @@ function addMessage(speaker, text, isBounce = false, isEnd = false) {
     logMessages.appendChild(logMsg);
     logMessages.scrollTop = logMessages.scrollHeight;
 
-    // Handle bounce animation
-    if (isBounce) {
-        customerBubble.style.animation = 'none';
-        customerBubble.offsetHeight; // Trigger reflow
-        customerBubble.style.animation = 'shake 0.5s ease-in-out';
+    // Handle bounce - customer leaves frustrated
+    if (isBounce && currentCustomerMotivation) {
+        updateCustomerExpression('frustrated');
+        anime({
+            targets: customerBubble,
+            translateX: [0, -10, 10, -10, 0],
+            duration: 500,
+            easing: 'easeInOutSine'
+        });
     }
 }
 
-// Update dashboard with real-time data
+// ===== DASHBOARD =====
+
 function updateDashboard(data) {
     console.log('Dashboard update received:', data);
     const { confidence, sentiment, frustration, turn } = data;
@@ -236,18 +453,18 @@ function updateDashboard(data) {
         turnCount.textContent = turn;
     }
 
-    // Update closing confidence
+    // Update closing confidence with animation
     const closingConf = confidence.closing_confidence || sentiment.likelihood_to_convert || 5;
-    confidenceBar.style.width = `${closingConf * 10}%`;
+    animateMeterFill(confidenceBar, closingConf * 10);
     confidenceValue.textContent = `${closingConf}/10`;
 
-    // Update motivation guess
+    // Update motivation guess with animation
     const motivation = confidence.motivation_guess || { head: 33, heart: 34, hand: 33 };
-    headBar.style.width = `${motivation.head}%`;
+    animateMeterFill(headBar, motivation.head);
     headValue.textContent = `${motivation.head}%`;
-    heartBar.style.width = `${motivation.heart}%`;
+    animateMeterFill(heartBar, motivation.heart);
     heartValue.textContent = `${motivation.heart}%`;
-    handBar.style.width = `${motivation.hand}%`;
+    animateMeterFill(handBar, motivation.hand);
     handValue.textContent = `${motivation.hand}%`;
 
     // Highlight dominant motivation
@@ -259,27 +476,26 @@ function updateDashboard(data) {
         }
     });
 
-    // Update reasoning with flavor prefix
-    const prefix = THINKING_PREFIXES[Math.floor(Math.random() * THINKING_PREFIXES.length)];
+    // Update reasoning
     const reasoning = confidence.reasoning || 'Analyzing...';
-    reasoningText.textContent = `${reasoning}`;
+    reasoningText.textContent = reasoning;
 
-    // Update vibes chyron
+    // Update vibes chyron with animation
     const vibe = Math.round((sentiment.satisfaction + sentiment.trust) / 2);
-    vibeBar.style.width = `${vibe * 10}%`;
+    animateMeterFill(vibeBar, vibe * 10);
     vibeValue.textContent = vibe;
 
-    frustrationBar.style.width = `${sentiment.frustration * 10}%`;
+    animateMeterFill(frustrationBar, sentiment.frustration * 10);
     frustrationValue.textContent = sentiment.frustration;
 
-    // High frustration effects
+    // High frustration visual
     if (sentiment.frustration >= 7) {
         frustrationBar.classList.add('high');
     } else {
         frustrationBar.classList.remove('high');
     }
 
-    closeReadyBar.style.width = `${sentiment.likelihood_to_convert * 10}%`;
+    animateMeterFill(closeReadyBar, sentiment.likelihood_to_convert * 10);
     closeReadyValue.textContent = sentiment.likelihood_to_convert;
 
     if (sentiment.likelihood_to_convert >= 7) {
@@ -288,22 +504,24 @@ function updateDashboard(data) {
         closeReadyBar.classList.remove('high');
     }
 
-    // Update mood with fun vocabulary
+    // Update mood
     const funMood = getFunMood(sentiment.emotional_tone);
     moodValue.textContent = funMood;
     moodValue.className = `mood-value ${getMoodClass(sentiment.emotional_tone)}`;
 
-    // Show danger overlay for high frustration
-    if (sentiment.frustration >= 6) {
-        dangerOverlay.style.display = 'flex';
-        const dangerText = dangerOverlay.querySelector('.danger-text');
-        dangerText.textContent = `⚠️ ${WARNING_TEXTS[Math.floor(Math.random() * WARNING_TEXTS.length)]} ⚠️`;
-    } else {
-        dangerOverlay.style.display = 'none';
+    // Update spicy indicator (replaces danger overlay)
+    updateSpicyIndicator(sentiment.frustration);
+
+    // Update character expressions
+    const agentExpr = getAgentExpression(confidence, sentiment, isAgentThinking);
+    updateAgentExpression(agentExpr);
+
+    if (currentCustomerMotivation) {
+        const customerExpr = getCustomerExpression(currentCustomerMotivation, sentiment);
+        updateCustomerExpression(customerExpr);
     }
 }
 
-// Get fun vocabulary for mood
 function getFunMood(tone) {
     const moodMap = {
         'neutral': ['VIBING', 'CHILL', 'STEADY', 'COASTING'][Math.floor(Math.random() * 4)],
@@ -335,7 +553,6 @@ function getMoodClass(tone) {
     return '';
 }
 
-// Highlight correct motivation in psychograph
 function highlightCorrectMotivation(motivation) {
     document.querySelectorAll('.meter-item').forEach(item => {
         item.classList.remove('correct-answer');
@@ -345,13 +562,10 @@ function highlightCorrectMotivation(motivation) {
     });
 }
 
-// Reset dashboard
 function resetDashboard() {
-    // Reset confidence
     confidenceBar.style.width = '50%';
     confidenceValue.textContent = '5/10';
 
-    // Reset motivation
     currentCustomerMotivation = null;
     headBar.style.width = '33%';
     headValue.textContent = '33%';
@@ -367,7 +581,6 @@ function resetDashboard() {
 
     reasoningText.textContent = 'Waiting for call to start...';
 
-    // Reset vibes
     vibeBar.style.width = '50%';
     vibeValue.textContent = '5';
     frustrationBar.style.width = '20%';
@@ -379,16 +592,24 @@ function resetDashboard() {
     moodValue.textContent = 'VIBING';
     moodValue.className = 'mood-value';
 
-    dangerOverlay.style.display = 'none';
+    // Reset spicy indicator
+    spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
+
     intelBox.style.display = 'none';
+
+    // Reset expressions
+    currentAgentExpression = 'neutral';
+    currentCustomerExpression = 'neutral';
+    isAgentThinking = false;
 }
 
-// Handle call end - show outcome modal
+// ===== CALL END =====
+
 function handleCallEnd(data) {
     console.log('handleCallEnd called with:', data);
     try {
-        // Hide danger overlay
-        dangerOverlay.style.display = 'none';
+        // Hide spicy indicator
+        spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
 
         // Configure outcome modal
         const outcomeEmoji = {
@@ -413,7 +634,6 @@ function handleCallEnd(data) {
         document.getElementById('outcome-title').textContent = outcomeTitle[outcome] || data.outcome_description;
 
         const pointsEl = document.getElementById('outcome-points');
-        pointsEl.textContent = `${data.points >= 0 ? '+' : ''}${data.points}`;
         pointsEl.className = `outcome-points ${data.points >= 0 ? 'positive' : 'negative'}`;
 
         // Build details
@@ -429,7 +649,7 @@ function handleCallEnd(data) {
             </div>
             <div class="outcome-detail-row">
                 <span class="outcome-detail-label">Real Motivation</span>
-                <span class="outcome-detail-value" style="color: ${customer.motivation === 'head' ? '#74C0FC' : customer.motivation === 'heart' ? '#FF8FB1' : '#69DB7C'}">${customer.motivation.toUpperCase()}</span>
+                <span class="outcome-detail-value" style="color: ${customer.motivation === 'head' ? '#4ECDC4' : customer.motivation === 'heart' ? '#FF8FB1' : '#FFE66D'}">${customer.motivation.toUpperCase()}</span>
             </div>
             <div class="outcome-detail-row">
                 <span class="outcome-detail-label">Agent's Guess</span>
@@ -453,6 +673,18 @@ function handleCallEnd(data) {
         outcomeModal.classList.add(outcome);
         outcomeModal.style.display = 'flex';
 
+        // Celebrate conversion with confetti!
+        if (outcome === 'conversion') {
+            celebrateConversion();
+            updateAgentExpression('happy');
+            updateCustomerExpression('satisfied');
+        }
+
+        // Animate score counting
+        setTimeout(() => {
+            animateScoreCount(pointsEl, data.points);
+        }, 300);
+
         // Re-enable start button
         startButton.disabled = false;
     } catch (error) {
@@ -461,7 +693,8 @@ function handleCallEnd(data) {
     }
 }
 
-// Start new call
+// ===== UI CONTROLS =====
+
 function startNewCall() {
     if (ws && ws.readyState === WebSocket.OPEN) {
         startButton.disabled = true;
@@ -471,7 +704,6 @@ function startNewCall() {
     }
 }
 
-// Toggle conversation log
 function toggleLog() {
     if (conversationLog.style.display === 'none') {
         conversationLog.style.display = 'block';
@@ -480,7 +712,6 @@ function toggleLog() {
     }
 }
 
-// Show leaderboard
 async function showLeaderboard() {
     leaderboardModal.classList.add('active');
     leaderboardContent.innerHTML = 'Loading...';
@@ -532,7 +763,8 @@ function hideLeaderboard() {
     leaderboardModal.classList.remove('active');
 }
 
-// Event listeners
+// ===== EVENT LISTENERS =====
+
 startButton.addEventListener('click', startNewCall);
 logButton.addEventListener('click', toggleLog);
 logClose.addEventListener('click', () => { conversationLog.style.display = 'none'; });
@@ -546,5 +778,5 @@ outcomeClose.addEventListener('click', () => {
     outcomeModal.className = 'outcome-modal';
 });
 
-// Initialize
+// ===== INITIALIZE =====
 connect();
