@@ -29,18 +29,25 @@ const handBar = document.getElementById('hand-bar');
 const handValue = document.getElementById('hand-value');
 const reasoningText = document.getElementById('reasoning-text');
 
-const satisfactionBar = document.getElementById('satisfaction-bar');
-const satisfactionValue = document.getElementById('satisfaction-value');
-const trustBar = document.getElementById('trust-bar');
-const trustValue = document.getElementById('trust-value');
-const urgencyBar = document.getElementById('urgency-bar');
-const urgencyValue = document.getElementById('urgency-value');
+// Consolidated sentiment elements
+const vibeBar = document.getElementById('vibe-bar');
+const vibeValue = document.getElementById('vibe-value');
 const frustrationBar = document.getElementById('frustration-bar');
 const frustrationValue = document.getElementById('frustration-value');
-const likelihoodBar = document.getElementById('likelihood-bar');
-const likelihoodValue = document.getElementById('likelihood-value');
+const closeReadyBar = document.getElementById('close-ready-bar');
+const closeReadyValue = document.getElementById('close-ready-value');
 const toneValue = document.getElementById('tone-value');
 const frustrationWarning = document.getElementById('frustration-warning');
+
+// Flavor text arrays
+const THINKING_PREFIXES = ['Hmm...', 'Interesting...', 'My read:', 'Gut feeling:', 'Sensing that', 'Noticing'];
+const FLAVOR_PHRASES = ["Let's see what happens...", "New challenger approaching", "Simulation initiated", "And we're live"];
+const WARNING_TEXTS = [
+    "Uh oh. They're getting spicy.",
+    "Warning: patience levels critical",
+    "Things are heating up",
+    "Abort? Continue? ...good luck"
+];
 
 // Modal elements
 const leaderboardModal = document.getElementById('leaderboard-modal');
@@ -148,31 +155,31 @@ function handleCallStart(data) {
     `;
     chatMessages.appendChild(divider);
 
-    // Add customer info peek (hidden by default)
+    // Add customer reveal (spectator mode - always visible)
     if (data.customer_preview) {
         // Store customer motivation for sidebar highlighting
         currentCustomerMotivation = data.customer_preview.motivation;
         highlightCorrectMotivation(currentCustomerMotivation);
 
-        const customerPeek = document.createElement('div');
-        customerPeek.className = 'customer-info-peek';
-        customerPeek.innerHTML = `
-            <button class="customer-info-toggle" onclick="toggleCustomerInfo(this)">
-                <span>Peek at Customer Info</span>
-                <span class="toggle-icon">&#9660;</span>
-            </button>
-            <div class="customer-info-details">
-                <div class="customer-info-grid">
-                    <span class="label">Name:</span>
-                    <span class="value">${data.customer_preview.name}</span>
-                    <span class="label">Tier:</span>
-                    <span class="value"><span class="tier-badge ${data.customer_preview.tier}">${data.customer_preview.tier_display}</span></span>
-                    <span class="label">Motivation:</span>
-                    <span class="value motivation-badge ${data.customer_preview.motivation}">${data.customer_preview.motivation.toUpperCase()}</span>
-                </div>
+        const customerReveal = document.createElement('div');
+        customerReveal.className = 'customer-reveal';
+        customerReveal.innerHTML = `
+            <div class="customer-reveal-header">You know. The agent doesn't.</div>
+            <div class="customer-reveal-grid">
+                <span class="label">Customer:</span>
+                <span class="value">${data.customer_preview.name}</span>
+                <span class="label">Property:</span>
+                <span class="value">${data.customer_preview.tier_display}</span>
+                <span class="label">Motivation:</span>
+                <span class="value">
+                    <span class="motivation-reveal-badge ${data.customer_preview.motivation}">
+                        ${data.customer_preview.motivation.toUpperCase()}
+                    </span>
+                </span>
             </div>
+            <div class="spectator-hint">Watch to see if the agent figures it out...</div>
         `;
-        chatMessages.appendChild(customerPeek);
+        chatMessages.appendChild(customerReveal);
     }
 
     scrollToBottom();
@@ -186,13 +193,6 @@ function highlightCorrectMotivation(motivation) {
             item.classList.add('correct-answer');
         }
     });
-}
-
-// Toggle customer info visibility
-function toggleCustomerInfo(button) {
-    button.classList.toggle('expanded');
-    const details = button.nextElementSibling;
-    details.classList.toggle('expanded');
 }
 
 // Add a message bubble
@@ -330,46 +330,77 @@ function updateDashboard(data) {
     });
     document.querySelector(`.motivation-item:has(.${dominant}-fill)`)?.classList.add('dominant');
 
-    // Update reasoning
-    reasoningText.textContent = confidence.reasoning || 'Analyzing...';
+    // Update reasoning with flavor prefix
+    const prefix = THINKING_PREFIXES[Math.floor(Math.random() * THINKING_PREFIXES.length)];
+    const reasoning = confidence.reasoning || 'Analyzing...';
+    reasoningText.textContent = `${prefix} ${reasoning}`;
 
-    // Update sentiment metrics
-    updateSentimentBar('satisfaction', sentiment.satisfaction);
-    updateSentimentBar('trust', sentiment.trust);
-    updateSentimentBar('urgency', sentiment.urgency);
-    updateSentimentBar('frustration', sentiment.frustration);
-    updateSentimentBar('likelihood', sentiment.likelihood_to_convert);
+    // Update consolidated sentiment metrics
+    // Vibe = average of satisfaction and trust
+    const vibe = Math.round((sentiment.satisfaction + sentiment.trust) / 2);
+    updateConsolidatedBar('vibe', vibe);
 
-    // Update tone
-    toneValue.textContent = sentiment.emotional_tone || 'neutral';
+    // Frustration
+    updateConsolidatedBar('frustration', sentiment.frustration);
+
+    // Close Ready = likelihood to convert
+    updateConsolidatedBar('close-ready', sentiment.likelihood_to_convert);
+
+    // Update tone with fun vocabulary
+    const funTone = getFunTone(sentiment.emotional_tone);
+    toneValue.textContent = funTone;
     toneValue.className = `tone-value ${getToneClass(sentiment.emotional_tone)}`;
 
-    // Show frustration warning if needed
-    // Use sentiment.frustration (the displayed value) for warning, not the accumulated state.frustration
+    // Show frustration warning if needed with random warning text
     const displayedFrustration = sentiment.frustration || 0;
     if (displayedFrustration >= 6) {
         frustrationWarning.style.display = 'flex';
         frustrationWarning.className = `frustration-warning ${displayedFrustration >= 8 ? 'critical' : 'warning'}`;
+        // Update warning text
+        const warningText = frustrationWarning.querySelector('.warning-text');
+        if (warningText) {
+            warningText.textContent = WARNING_TEXTS[Math.floor(Math.random() * WARNING_TEXTS.length)];
+        }
     } else {
         frustrationWarning.style.display = 'none';
     }
 }
 
-function updateSentimentBar(metric, value) {
+// Update consolidated sentiment bars
+function updateConsolidatedBar(metric, value) {
     const bar = document.getElementById(`${metric}-bar`);
     const valueEl = document.getElementById(`${metric}-value`);
     if (bar && valueEl) {
         bar.style.width = `${value * 10}%`;
         valueEl.textContent = value;
 
-        // Color coding
-        if (metric === 'frustration') {
-            bar.className = `sentiment-fill frustration-fill ${value >= 7 ? 'high' : value >= 4 ? 'medium' : 'low'}`;
-        } else {
-            bar.className = `sentiment-fill ${metric}-fill ${value >= 7 ? 'high' : value >= 4 ? 'medium' : 'low'}`;
+        // Add high class for visual emphasis
+        bar.classList.remove('high');
+        if (metric === 'frustration' && value >= 7) {
+            bar.classList.add('high');
+        } else if (metric === 'close-ready' && value >= 7) {
+            bar.classList.add('high');
         }
     }
 }
+
+// Get fun vocabulary for tone
+function getFunTone(tone) {
+    const toneMap = {
+        'neutral': ['vibing', 'chill', 'steady', 'coasting'][Math.floor(Math.random() * 4)],
+        'frustrated': ['spicy', 'heated', 'yikes', 'prickly'][Math.floor(Math.random() * 4)],
+        'annoyed': ['spicy', 'prickly', 'edgy'][Math.floor(Math.random() * 3)],
+        'impatient': ['antsy', 'restless', 'tapping feet'][Math.floor(Math.random() * 3)],
+        'happy': ['golden', 'winning', 'sunny'][Math.floor(Math.random() * 3)],
+        'interested': ['hooked', 'curious', 'leaning in'][Math.floor(Math.random() * 3)],
+        'curious': ['intrigued', 'exploring', 'ears perked'][Math.floor(Math.random() * 3)],
+        'skeptical': ['side-eye', 'hmm...', 'unconvinced'][Math.floor(Math.random() * 3)],
+        'warm': ['cozy', 'friendly', 'open'][Math.floor(Math.random() * 3)],
+        'engaged': ['locked in', 'all ears', 'present'][Math.floor(Math.random() * 3)]
+    };
+    return toneMap[tone?.toLowerCase()] || tone || 'vibing';
+}
+
 
 function getDominantMotivation(motivation) {
     const { head, heart, hand } = motivation;
@@ -412,18 +443,14 @@ function resetDashboard() {
 
     reasoningText.textContent = 'Waiting for conversation to begin...';
 
-    // Neutral sentiment starting point
-    satisfactionBar.style.width = '50%';
-    satisfactionValue.textContent = '5';
-    trustBar.style.width = '50%';
-    trustValue.textContent = '5';
-    urgencyBar.style.width = '50%';
-    urgencyValue.textContent = '5';
+    // Consolidated sentiment starting point
+    vibeBar.style.width = '50%';
+    vibeValue.textContent = '5';
     frustrationBar.style.width = '20%';
     frustrationValue.textContent = '2';
-    likelihoodBar.style.width = '50%';
-    likelihoodValue.textContent = '5';
-    toneValue.textContent = 'neutral';
+    closeReadyBar.style.width = '50%';
+    closeReadyValue.textContent = '5';
+    toneValue.textContent = 'vibing';
     toneValue.className = 'tone-value neutral';
 
     frustrationWarning.style.display = 'none';
