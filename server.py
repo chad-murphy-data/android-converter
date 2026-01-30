@@ -68,7 +68,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # Global state
-warmup_mode = False
 call_counter = 0
 
 
@@ -106,20 +105,6 @@ async def get_agent_stats(style: str):
     return {**state, **info}
 
 
-@app.post("/api/warmup")
-async def toggle_warmup():
-    """Toggle warmup mode (5% fraud vs 15%)."""
-    global warmup_mode
-    warmup_mode = not warmup_mode
-    return {"warmup_mode": warmup_mode}
-
-
-@app.get("/api/warmup")
-async def get_warmup_status():
-    """Get current warmup mode status."""
-    return {"warmup_mode": warmup_mode}
-
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -144,7 +129,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
     call_id = call_counter
 
     # Generate customer and agent
-    customer = generate_customer(warmup_mode)
+    customer = generate_customer()
     agent = generate_agent()
 
     # Load agent's learned patterns
@@ -169,8 +154,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             "tier_display": get_tier_display(customer.tier),
             "motivation": customer.motivation,
             "call_reason": customer.call_reason
-        },
-        "warmup_mode": warmup_mode
+        }
     })
 
     # Conversation history for each participant

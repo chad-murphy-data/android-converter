@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Listing Closer - Agent Learning Lab</title>
+    <title>Conversation Lab</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="main-container">
         <header>
-            <h1>Listing Closer</h1>
-            <p class="subtitle">Agent Learning Lab</p>
+            <h1>Conversation Lab</h1>
+            <p class="subtitle">Test in 18 minutes what takes 18 months in the field</p>
         </header>
+
+        <div class="hypothesis-banner">
+            <span class="hypothesis-label">Current experiment:</span>
+            <span class="hypothesis-text">Does matching communication style to customer motivation improve conversion?</span>
+        </div>
 
         <div class="content-area">
             <!-- Left Panel: Chat -->
@@ -33,32 +38,17 @@
                 <div class="chat-window" id="chat-window">
                     <div class="chat-messages" id="chat-messages">
                         <div class="welcome-message">
-                            <h3>Agent Learning Lab</h3>
-                            <p>Watch AI agents learn to handle listing calls over time. Each call features:</p>
-                            <ul>
-                                <li>Random seller persona (motivation + property tier + potential red flags)</li>
-                                <li>Random agent archetype that learns from past calls</li>
-                                <li>Real-time sentiment and risk analysis</li>
-                            </ul>
-                            <p>Agents develop patterns from experience. Click "Start Call" to observe.</p>
+                            <h3>Conversation Lab</h3>
+                            <p>A behavioral science sandbox for testing customer interaction hypotheses.</p>
+                            <p><strong>Current experiment:</strong> Does matching communication style to customer motivation (Head/Heart/Hand) improve conversion rates?</p>
+                            <p>Click "Start Call" to run a trial.</p>
                         </div>
                     </div>
-                </div>
-
-                <div class="stats-bar" id="stats-bar">
-                    <span class="agent-score closer" title="Closer"><strong class="agent-score-icon">C</strong>: <span id="closer-points">0</span></span>
-                    <span class="agent-score detective" title="Detective"><strong class="agent-score-icon">D</strong>: <span id="detective-points">0</span></span>
-                    <span class="agent-score empath" title="Empath"><strong class="agent-score-icon">E</strong>: <span id="empath-points">0</span></span>
-                    <span class="agent-score robot" title="Robot"><strong class="agent-score-icon">R</strong>: <span id="robot-points">0</span></span>
-                    <span class="agent-score gambler" title="Gambler"><strong class="agent-score-icon">G</strong>: <span id="gambler-points">0</span></span>
                 </div>
 
                 <div class="button-row">
                     <button class="start-button" id="start-button">
                         Start Call
-                    </button>
-                    <button class="warmup-button" id="warmup-button">
-                        Warmup Mode: OFF
                     </button>
                     <button class="leaderboard-button" id="leaderboard-button">
                         Leaderboard
@@ -167,6 +157,10 @@
                 </div>
             </div>
         </div>
+
+        <footer class="lab-footer">
+            <span>One hypothesis today. Any hypothesis tomorrow.</span>
+        </footer>
 
         <!-- Leaderboard Modal -->
         <div class="modal-overlay" id="leaderboard-modal">

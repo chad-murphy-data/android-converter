@@ -1,7 +1,6 @@
 // WebSocket connection and UI logic for Listing Closer Simulator
 
 let ws = null;
-let warmupMode = false;
 let currentFraudRisk = 2; // Track sketchy risk for alert bubble
 let currentAgentStyle = null; // Track current agent style for avatar images
 let currentCustomerMotivation = null; // Track actual customer motivation for sidebar highlight
@@ -9,15 +8,8 @@ let currentCustomerMotivation = null; // Track actual customer motivation for si
 // DOM Elements
 const chatMessages = document.getElementById('chat-messages');
 const startButton = document.getElementById('start-button');
-const warmupButton = document.getElementById('warmup-button');
 const leaderboardButton = document.getElementById('leaderboard-button');
 const turnCount = document.getElementById('turn-count');
-// Agent score elements
-const closerPoints = document.getElementById('closer-points');
-const detectivePoints = document.getElementById('detective-points');
-const empathPoints = document.getElementById('empath-points');
-const robotPoints = document.getElementById('robot-points');
-const gamblerPoints = document.getElementById('gambler-points');
 
 // Agent badge elements
 const agentBadge = document.getElementById('agent-badge');
@@ -72,8 +64,6 @@ function connect() {
     ws.onopen = () => {
         console.log('Connected to server');
         startButton.disabled = false;
-        loadInitialStats();
-        loadWarmupStatus();
     };
 
     ws.onclose = () => {
@@ -155,7 +145,6 @@ function handleCallStart(data) {
     divider.innerHTML = `
         <span>Call #${data.call_id}</span>
         <span class="agent-tag ${agent.style}">${agentInfo.display_name}</span>
-        ${data.warmup_mode ? '<span class="warmup-tag">WARMUP</span>' : ''}
     `;
     chatMessages.appendChild(divider);
 
@@ -444,9 +433,6 @@ function resetDashboard() {
 function handleCallEnd(data) {
     console.log('handleCallEnd called with:', data);
     try {
-        // Refresh agent scores from leaderboard
-        loadInitialStats();
-
         // Create outcome card
         const card = document.createElement('div');
         card.className = `outcome-card ${data.outcome}`;
@@ -530,87 +516,6 @@ function handleCallEnd(data) {
     }
 }
 
-// Update stats display
-function updateStats(stats) {
-    callCount.textContent = stats.total_calls || 0;
-    totalPoints.textContent = stats.total_points || 0;
-    convertedCount.textContent = stats.conversions || 0;
-    fraudCaughtCount.textContent = stats.frauds_caught || 0;
-}
-
-// Load initial stats
-async function loadInitialStats() {
-    try {
-        const response = await fetch('/api/leaderboard');
-        const leaderboard = await response.json();
-        updateAgentScores(leaderboard);
-    } catch (error) {
-        console.error('Failed to load stats:', error);
-    }
-}
-
-// Update per-agent scores in stats bar
-function updateAgentScores(leaderboard) {
-    // Reset all to 0
-    closerPoints.textContent = '0';
-    detectivePoints.textContent = '0';
-    empathPoints.textContent = '0';
-    robotPoints.textContent = '0';
-    gamblerPoints.textContent = '0';
-
-    // Update from leaderboard data
-    leaderboard.forEach(agent => {
-        const points = agent.total_points || 0;
-        const pointsText = points >= 0 ? `+${points}` : `${points}`;
-        switch (agent.style) {
-            case 'closer':
-                closerPoints.textContent = pointsText;
-                break;
-            case 'detective':
-                detectivePoints.textContent = pointsText;
-                break;
-            case 'empath':
-                empathPoints.textContent = pointsText;
-                break;
-            case 'robot':
-                robotPoints.textContent = pointsText;
-                break;
-            case 'gambler':
-                gamblerPoints.textContent = pointsText;
-                break;
-        }
-    });
-}
-
-// Load warmup status
-async function loadWarmupStatus() {
-    try {
-        const response = await fetch('/api/warmup');
-        const data = await response.json();
-        warmupMode = data.warmup_mode;
-        updateWarmupButton();
-    } catch (error) {
-        console.error('Failed to load warmup status:', error);
-    }
-}
-
-// Toggle warmup mode
-async function toggleWarmup() {
-    try {
-        const response = await fetch('/api/warmup', { method: 'POST' });
-        const data = await response.json();
-        warmupMode = data.warmup_mode;
-        updateWarmupButton();
-    } catch (error) {
-        console.error('Failed to toggle warmup:', error);
-    }
-}
-
-function updateWarmupButton() {
-    warmupButton.textContent = `Warmup Mode: ${warmupMode ? 'ON' : 'OFF'}`;
-    warmupButton.className = `warmup-button ${warmupMode ? 'active' : ''}`;
-}
-
 // Start new call
 function startNewCall() {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -678,7 +583,6 @@ function scrollToBottom() {
 
 // Event listeners
 startButton.addEventListener('click', startNewCall);
-warmupButton.addEventListener('click', toggleWarmup);
 leaderboardButton.addEventListener('click', showLeaderboard);
 modalClose.addEventListener('click', hideLeaderboard);
 leaderboardModal.addEventListener('click', (e) => {
