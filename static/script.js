@@ -1,67 +1,71 @@
-// WebSocket connection and UI logic for Listing Closer Simulator
+// Cartoon Broadcast UI - WebSocket connection and UI logic
 
 let ws = null;
-let currentFraudRisk = 2; // Track sketchy risk for alert bubble
-let currentAgentStyle = null; // Track current agent style for avatar images
-let currentCustomerMotivation = null; // Track actual customer motivation for sidebar highlight
+let currentAgentStyle = null;
+let currentCustomerMotivation = null;
+let transcript = [];
 
-// DOM Elements
-const chatMessages = document.getElementById('chat-messages');
-const startButton = document.getElementById('start-button');
-const leaderboardButton = document.getElementById('leaderboard-button');
+// DOM Elements - Main Stage
+const agentImage = document.getElementById('agent-image');
+const agentName = document.getElementById('agent-name');
+const agentTitle = document.getElementById('agent-title');
+const agentBubble = document.getElementById('agent-bubble');
+const customerBubble = document.getElementById('customer-bubble');
+const customerName = document.getElementById('customer-name');
+const customerTitle = document.getElementById('customer-title');
+const customerSilhouette = document.getElementById('customer-silhouette');
+
+// DOM Elements - Header
 const turnCount = document.getElementById('turn-count');
 
-// Agent badge elements
-const agentBadge = document.getElementById('agent-badge');
-const agentIcon = agentBadge.querySelector('.agent-icon');
-const agentAvatarImg = document.getElementById('agent-avatar-img');
-const agentName = agentBadge.querySelector('.agent-name');
-const agentStyle = agentBadge.querySelector('.agent-style');
-
-// Dashboard elements
-const confidenceBar = document.getElementById('confidence-bar');
-const confidenceValue = document.getElementById('confidence-value');
+// DOM Elements - Psychograph
 const headBar = document.getElementById('head-bar');
 const headValue = document.getElementById('head-value');
 const heartBar = document.getElementById('heart-bar');
 const heartValue = document.getElementById('heart-value');
 const handBar = document.getElementById('hand-bar');
 const handValue = document.getElementById('hand-value');
+const confidenceBar = document.getElementById('confidence-bar');
+const confidenceValue = document.getElementById('confidence-value');
 const reasoningText = document.getElementById('reasoning-text');
 
-// Consolidated sentiment elements
+// DOM Elements - Intel Box
+const intelBox = document.getElementById('intel-box');
+const intelName = document.getElementById('intel-name');
+const intelTier = document.getElementById('intel-tier');
+const intelMotivation = document.getElementById('intel-motivation');
+
+// DOM Elements - Vibes Chyron
 const vibeBar = document.getElementById('vibe-bar');
 const vibeValue = document.getElementById('vibe-value');
 const frustrationBar = document.getElementById('frustration-bar');
 const frustrationValue = document.getElementById('frustration-value');
 const closeReadyBar = document.getElementById('close-ready-bar');
 const closeReadyValue = document.getElementById('close-ready-value');
-const toneValue = document.getElementById('tone-value');
-const frustrationWarning = document.getElementById('frustration-warning');
+const moodValue = document.getElementById('mood-value');
+const dangerOverlay = document.getElementById('danger-overlay');
 
-// Flavor text arrays
-const THINKING_PREFIXES = ['Hmm...', 'Interesting...', 'My read:', 'Gut feeling:', 'Sensing that', 'Noticing'];
-const FLAVOR_PHRASES = ["Let's see what happens...", "New challenger approaching", "Simulation initiated", "And we're live"];
-const WARNING_TEXTS = [
-    "Uh oh. They're getting spicy.",
-    "Warning: patience levels critical",
-    "Things are heating up",
-    "Abort? Continue? ...good luck"
-];
-
-// Modal elements
+// DOM Elements - Controls & Modals
+const startButton = document.getElementById('start-button');
+const logButton = document.getElementById('log-button');
+const leaderboardButton = document.getElementById('leaderboard-button');
+const conversationLog = document.getElementById('conversation-log');
+const logMessages = document.getElementById('log-messages');
+const logClose = document.getElementById('log-close');
+const outcomeModal = document.getElementById('outcome-modal');
+const outcomeClose = document.getElementById('outcome-close');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const modalClose = document.getElementById('modal-close');
 const leaderboardContent = document.getElementById('leaderboard-content');
 
-// Agent style icons
-const AGENT_ICONS = {
-    'closer': 'C',
-    'detective': 'D',
-    'empath': 'E',
-    'robot': 'R',
-    'gambler': 'G'
-};
+// Flavor text arrays
+const THINKING_PREFIXES = ['Hmm...', 'Interesting...', 'My read:', 'Gut feeling:', 'Sensing that', 'Noticing', 'Wait...', 'Aha!'];
+const WARNING_TEXTS = [
+    "SELLER GETTING SPICY",
+    "PATIENCE LEVELS CRITICAL",
+    "THINGS ARE HEATING UP",
+    "ABORT? CONTINUE? ...GOOD LUCK"
+];
 
 // Connect to WebSocket
 function connect() {
@@ -100,7 +104,7 @@ function handleMessage(data) {
             showTypingIndicator(data.speaker);
             break;
         case 'message':
-            hideTypingIndicator();
+            hideTypingIndicator(data.speaker);
             addMessage(data.speaker, data.text, data.is_bounce, data.is_end);
             if (data.turn) {
                 turnCount.textContent = data.turn;
@@ -120,178 +124,105 @@ function handleMessage(data) {
 
 // Handle call start
 function handleCallStart(data) {
-    // Clear welcome message
-    const welcome = chatMessages.querySelector('.welcome-message');
-    if (welcome) {
-        welcome.remove();
-    }
+    // Reset transcript
+    transcript = [];
+    logMessages.innerHTML = '';
 
     // Reset turn counter
     turnCount.textContent = '0';
 
-    // Update agent badge
+    // Update agent info
     const agent = data.agent;
     const agentInfo = data.agent_info;
-    currentAgentStyle = agent.style; // Store for avatar images
+    currentAgentStyle = agent.style;
 
-    // Show avatar image, hide letter icon
-    agentAvatarImg.src = `/avatars/${agent.style}.png`;
-    agentAvatarImg.alt = agent.style;
-    agentAvatarImg.style.display = 'block';
-    agentIcon.style.display = 'none';
-
+    agentImage.src = `/avatars/${agent.style}.png`;
     agentName.textContent = agent.name;
-    agentStyle.textContent = agentInfo.display_name;
+    agentTitle.textContent = agentInfo.display_name;
+
+    // Reset agent bubble
+    setBubbleContent('agent', 'Waiting for call...');
+
+    // Show intel box with customer info (spectator mode)
+    if (data.customer_preview) {
+        currentCustomerMotivation = data.customer_preview.motivation;
+
+        intelName.textContent = data.customer_preview.name;
+        intelTier.textContent = data.customer_preview.tier_display;
+        intelMotivation.textContent = data.customer_preview.motivation.toUpperCase();
+        intelMotivation.className = `intel-value motivation-badge ${data.customer_preview.motivation}`;
+
+        intelBox.style.display = 'block';
+
+        // Highlight correct motivation in psychograph
+        highlightCorrectMotivation(currentCustomerMotivation);
+    }
 
     // Reset dashboard
     resetDashboard();
 
-    // Add call divider
-    const divider = document.createElement('div');
-    divider.className = 'call-divider';
-    divider.innerHTML = `
-        <span>Call #${data.call_id}</span>
-        <span class="agent-tag ${agent.style}">${agentInfo.display_name}</span>
-    `;
-    chatMessages.appendChild(divider);
+    // Reset customer display
+    customerName.textContent = 'SELLER';
+    customerTitle.textContent = 'Unknown';
+    setBubbleContent('customer', '...');
+}
 
-    // Add customer reveal (spectator mode - always visible)
-    if (data.customer_preview) {
-        // Store customer motivation for sidebar highlighting
-        currentCustomerMotivation = data.customer_preview.motivation;
-        highlightCorrectMotivation(currentCustomerMotivation);
+// Set speech bubble content
+function setBubbleContent(speaker, text, isTyping = false) {
+    const bubble = speaker === 'agent' ? agentBubble : customerBubble;
+    const content = bubble.querySelector('.bubble-content');
 
-        const customerReveal = document.createElement('div');
-        customerReveal.className = 'customer-reveal';
-        customerReveal.innerHTML = `
-            <div class="customer-reveal-header">You know. The agent doesn't.</div>
-            <div class="customer-reveal-grid">
-                <span class="label">Customer:</span>
-                <span class="value">${data.customer_preview.name}</span>
-                <span class="label">Property:</span>
-                <span class="value">${data.customer_preview.tier_display}</span>
-                <span class="label">Motivation:</span>
-                <span class="value">
-                    <span class="motivation-reveal-badge ${data.customer_preview.motivation}">
-                        ${data.customer_preview.motivation.toUpperCase()}
-                    </span>
-                </span>
-            </div>
-            <div class="spectator-hint">Watch to see if the agent figures it out...</div>
+    if (isTyping) {
+        bubble.classList.add('typing');
+        content.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
         `;
-        chatMessages.appendChild(customerReveal);
-    }
-
-    scrollToBottom();
-}
-
-// Highlight the correct motivation in the sidebar
-function highlightCorrectMotivation(motivation) {
-    document.querySelectorAll('.motivation-item').forEach(item => {
-        item.classList.remove('correct-answer');
-        if (item.dataset.motivation === motivation) {
-            item.classList.add('correct-answer');
-        }
-    });
-}
-
-// Add a message bubble
-function addMessage(speaker, text, isBounce = false, isEnd = false) {
-    const message = document.createElement('div');
-
-    // Handle system messages (call ended notifications)
-    if (speaker === 'system') {
-        message.className = 'message system-message';
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble system-bubble';
-        bubble.textContent = text;
-        message.appendChild(bubble);
-        chatMessages.appendChild(message);
-
-        // Add fraud alert bubble if agent flagged for fraud
-        if (text.includes('flagged for fraud') && currentFraudRisk >= 5) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'message system-message';
-            const alertBubble = document.createElement('div');
-            alertBubble.className = 'bubble fraud-alert-bubble';
-            alertBubble.innerHTML = `<span class="fraud-icon">⚠</span> Agent detected fraud risk: ${currentFraudRisk}/10`;
-            alertDiv.appendChild(alertBubble);
-            chatMessages.appendChild(alertDiv);
-        }
-
-        scrollToBottom();
-        return;
-    }
-
-    message.className = `message ${speaker}${isBounce ? ' bounce' : ''}`;
-
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-
-    // Use image for agent avatar, letter for customer (for now)
-    if (speaker === 'agent' && currentAgentStyle) {
-        const img = document.createElement('img');
-        img.src = `/avatars/${currentAgentStyle}.png`;
-        img.alt = currentAgentStyle;
-        img.className = 'avatar-img';
-        avatar.appendChild(img);
     } else {
-        avatar.textContent = speaker === 'agent' ? 'A' : 'C';
+        bubble.classList.remove('typing');
+        content.textContent = text;
     }
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.textContent = text;
-
-    message.appendChild(avatar);
-    message.appendChild(bubble);
-    chatMessages.appendChild(message);
-
-    scrollToBottom();
 }
 
 // Show typing indicator
 function showTypingIndicator(speaker) {
-    hideTypingIndicator();
-
-    const indicator = document.createElement('div');
-    indicator.className = `typing-indicator ${speaker}`;
-    indicator.id = 'typing-indicator';
-
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-
-    // Use image for agent avatar, letter for customer (for now)
-    if (speaker === 'agent' && currentAgentStyle) {
-        const img = document.createElement('img');
-        img.src = `/avatars/${currentAgentStyle}.png`;
-        img.alt = currentAgentStyle;
-        img.className = 'avatar-img';
-        avatar.appendChild(img);
-    } else {
-        avatar.textContent = speaker === 'agent' ? 'A' : 'C';
-    }
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.innerHTML = `
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-    `;
-
-    indicator.appendChild(avatar);
-    indicator.appendChild(bubble);
-    chatMessages.appendChild(indicator);
-
-    scrollToBottom();
+    setBubbleContent(speaker, '', true);
 }
 
 // Hide typing indicator
-function hideTypingIndicator() {
-    const indicator = document.getElementById('typing-indicator');
-    if (indicator) {
-        indicator.remove();
+function hideTypingIndicator(speaker) {
+    // Will be replaced by actual message
+}
+
+// Add message to transcript and update UI
+function addMessage(speaker, text, isBounce = false, isEnd = false) {
+    // Update speech bubble
+    if (speaker !== 'system') {
+        setBubbleContent(speaker, text);
+    }
+
+    // Add to transcript
+    transcript.push({ speaker, text, isBounce });
+
+    // Add to log
+    const logMsg = document.createElement('div');
+    logMsg.className = `log-message ${speaker}`;
+
+    if (speaker === 'system') {
+        logMsg.textContent = text;
+    } else {
+        logMsg.innerHTML = `<span class="log-speaker">${speaker}:</span>${text}`;
+    }
+
+    logMessages.appendChild(logMsg);
+    logMessages.scrollTop = logMessages.scrollHeight;
+
+    // Handle bounce animation
+    if (isBounce) {
+        customerBubble.style.animation = 'none';
+        customerBubble.offsetHeight; // Trigger reflow
+        customerBubble.style.animation = 'shake 0.5s ease-in-out';
     }
 }
 
@@ -305,14 +236,10 @@ function updateDashboard(data) {
         turnCount.textContent = turn;
     }
 
-    // Update closing confidence (derived from likelihood to convert and trust)
+    // Update closing confidence
     const closingConf = confidence.closing_confidence || sentiment.likelihood_to_convert || 5;
     confidenceBar.style.width = `${closingConf * 10}%`;
     confidenceValue.textContent = `${closingConf}/10`;
-    confidenceBar.className = `metric-fill confidence-fill ${closingConf >= 7 ? 'high' : closingConf >= 4 ? 'medium' : 'low'}`;
-
-    // Store fraud risk for alert bubble (still tracked even if not displayed)
-    currentFraudRisk = confidence.fraud_likelihood || 2;
 
     // Update motivation guess
     const motivation = confidence.motivation_guess || { head: 33, heart: 34, hand: 33 };
@@ -325,82 +252,73 @@ function updateDashboard(data) {
 
     // Highlight dominant motivation
     const dominant = getDominantMotivation(motivation);
-    document.querySelectorAll('.motivation-item').forEach(item => {
+    document.querySelectorAll('.meter-item').forEach(item => {
         item.classList.remove('dominant');
+        if (item.dataset.motivation === dominant) {
+            item.classList.add('dominant');
+        }
     });
-    document.querySelector(`.motivation-item:has(.${dominant}-fill)`)?.classList.add('dominant');
 
     // Update reasoning with flavor prefix
     const prefix = THINKING_PREFIXES[Math.floor(Math.random() * THINKING_PREFIXES.length)];
     const reasoning = confidence.reasoning || 'Analyzing...';
-    reasoningText.textContent = `${prefix} ${reasoning}`;
+    reasoningText.textContent = `${reasoning}`;
 
-    // Update consolidated sentiment metrics
-    // Vibe = average of satisfaction and trust
+    // Update vibes chyron
     const vibe = Math.round((sentiment.satisfaction + sentiment.trust) / 2);
-    updateConsolidatedBar('vibe', vibe);
+    vibeBar.style.width = `${vibe * 10}%`;
+    vibeValue.textContent = vibe;
 
-    // Frustration
-    updateConsolidatedBar('frustration', sentiment.frustration);
+    frustrationBar.style.width = `${sentiment.frustration * 10}%`;
+    frustrationValue.textContent = sentiment.frustration;
 
-    // Close Ready = likelihood to convert
-    updateConsolidatedBar('close-ready', sentiment.likelihood_to_convert);
-
-    // Update tone with fun vocabulary
-    const funTone = getFunTone(sentiment.emotional_tone);
-    toneValue.textContent = funTone;
-    toneValue.className = `tone-value ${getToneClass(sentiment.emotional_tone)}`;
-
-    // Show frustration warning if needed with random warning text
-    const displayedFrustration = sentiment.frustration || 0;
-    if (displayedFrustration >= 6) {
-        frustrationWarning.style.display = 'flex';
-        frustrationWarning.className = `frustration-warning ${displayedFrustration >= 8 ? 'critical' : 'warning'}`;
-        // Update warning text
-        const warningText = frustrationWarning.querySelector('.warning-text');
-        if (warningText) {
-            warningText.textContent = WARNING_TEXTS[Math.floor(Math.random() * WARNING_TEXTS.length)];
-        }
+    // High frustration effects
+    if (sentiment.frustration >= 7) {
+        frustrationBar.classList.add('high');
     } else {
-        frustrationWarning.style.display = 'none';
+        frustrationBar.classList.remove('high');
+    }
+
+    closeReadyBar.style.width = `${sentiment.likelihood_to_convert * 10}%`;
+    closeReadyValue.textContent = sentiment.likelihood_to_convert;
+
+    if (sentiment.likelihood_to_convert >= 7) {
+        closeReadyBar.classList.add('high');
+    } else {
+        closeReadyBar.classList.remove('high');
+    }
+
+    // Update mood with fun vocabulary
+    const funMood = getFunMood(sentiment.emotional_tone);
+    moodValue.textContent = funMood;
+    moodValue.className = `mood-value ${getMoodClass(sentiment.emotional_tone)}`;
+
+    // Show danger overlay for high frustration
+    if (sentiment.frustration >= 6) {
+        dangerOverlay.style.display = 'flex';
+        const dangerText = dangerOverlay.querySelector('.danger-text');
+        dangerText.textContent = `⚠️ ${WARNING_TEXTS[Math.floor(Math.random() * WARNING_TEXTS.length)]} ⚠️`;
+    } else {
+        dangerOverlay.style.display = 'none';
     }
 }
 
-// Update consolidated sentiment bars
-function updateConsolidatedBar(metric, value) {
-    const bar = document.getElementById(`${metric}-bar`);
-    const valueEl = document.getElementById(`${metric}-value`);
-    if (bar && valueEl) {
-        bar.style.width = `${value * 10}%`;
-        valueEl.textContent = value;
-
-        // Add high class for visual emphasis
-        bar.classList.remove('high');
-        if (metric === 'frustration' && value >= 7) {
-            bar.classList.add('high');
-        } else if (metric === 'close-ready' && value >= 7) {
-            bar.classList.add('high');
-        }
-    }
-}
-
-// Get fun vocabulary for tone
-function getFunTone(tone) {
-    const toneMap = {
-        'neutral': ['vibing', 'chill', 'steady', 'coasting'][Math.floor(Math.random() * 4)],
-        'frustrated': ['spicy', 'heated', 'yikes', 'prickly'][Math.floor(Math.random() * 4)],
-        'annoyed': ['spicy', 'prickly', 'edgy'][Math.floor(Math.random() * 3)],
-        'impatient': ['antsy', 'restless', 'tapping feet'][Math.floor(Math.random() * 3)],
-        'happy': ['golden', 'winning', 'sunny'][Math.floor(Math.random() * 3)],
-        'interested': ['hooked', 'curious', 'leaning in'][Math.floor(Math.random() * 3)],
-        'curious': ['intrigued', 'exploring', 'ears perked'][Math.floor(Math.random() * 3)],
-        'skeptical': ['side-eye', 'hmm...', 'unconvinced'][Math.floor(Math.random() * 3)],
-        'warm': ['cozy', 'friendly', 'open'][Math.floor(Math.random() * 3)],
-        'engaged': ['locked in', 'all ears', 'present'][Math.floor(Math.random() * 3)]
+// Get fun vocabulary for mood
+function getFunMood(tone) {
+    const moodMap = {
+        'neutral': ['VIBING', 'CHILL', 'STEADY', 'COASTING'][Math.floor(Math.random() * 4)],
+        'frustrated': ['SPICY', 'HEATED', 'YIKES', 'PRICKLY'][Math.floor(Math.random() * 4)],
+        'annoyed': ['SPICY', 'PRICKLY', 'EDGY'][Math.floor(Math.random() * 3)],
+        'impatient': ['ANTSY', 'RESTLESS', 'TAPPING'][Math.floor(Math.random() * 3)],
+        'happy': ['GOLDEN', 'WINNING', 'SUNNY'][Math.floor(Math.random() * 3)],
+        'interested': ['HOOKED', 'CURIOUS', 'LEANING IN'][Math.floor(Math.random() * 3)],
+        'curious': ['INTRIGUED', 'EXPLORING', 'EARS UP'][Math.floor(Math.random() * 3)],
+        'skeptical': ['SIDE-EYE', 'HMM...', 'DOUBTFUL'][Math.floor(Math.random() * 3)],
+        'warm': ['COZY', 'FRIENDLY', 'OPEN'][Math.floor(Math.random() * 3)],
+        'engaged': ['LOCKED IN', 'ALL EARS', 'PRESENT'][Math.floor(Math.random() * 3)]
     };
-    return toneMap[tone?.toLowerCase()] || tone || 'vibing';
+    return moodMap[tone?.toLowerCase()] || tone?.toUpperCase() || 'VIBING';
 }
-
 
 function getDominantMotivation(motivation) {
     const { head, heart, hand } = motivation;
@@ -409,25 +327,32 @@ function getDominantMotivation(motivation) {
     return 'hand';
 }
 
-function getToneClass(tone) {
+function getMoodClass(tone) {
     const positive = ['happy', 'interested', 'curious', 'engaged', 'warm', 'friendly'];
     const negative = ['frustrated', 'annoyed', 'skeptical', 'impatient', 'hostile', 'angry'];
     if (positive.includes(tone?.toLowerCase())) return 'positive';
     if (negative.includes(tone?.toLowerCase())) return 'negative';
-    return 'neutral';
+    return '';
 }
 
-// Reset dashboard to initial state (neutral priors - no assumptions)
+// Highlight correct motivation in psychograph
+function highlightCorrectMotivation(motivation) {
+    document.querySelectorAll('.meter-item').forEach(item => {
+        item.classList.remove('correct-answer');
+        if (item.dataset.motivation === motivation) {
+            item.classList.add('correct-answer');
+        }
+    });
+}
+
+// Reset dashboard
 function resetDashboard() {
-    // Start with neutral closing confidence
+    // Reset confidence
     confidenceBar.style.width = '50%';
     confidenceValue.textContent = '5/10';
-    confidenceBar.className = 'metric-fill confidence-fill medium';
 
-    // Reset customer motivation tracking
+    // Reset motivation
     currentCustomerMotivation = null;
-
-    // Equal probability for all motivations (true neutral)
     headBar.style.width = '33%';
     headValue.textContent = '33%';
     heartBar.style.width = '33%';
@@ -435,110 +360,103 @@ function resetDashboard() {
     handBar.style.width = '33%';
     handValue.textContent = '33%';
 
-    // Remove any dominant or correct-answer highlighting
-    document.querySelectorAll('.motivation-item').forEach(item => {
+    document.querySelectorAll('.meter-item').forEach(item => {
         item.classList.remove('dominant');
         item.classList.remove('correct-answer');
     });
 
-    reasoningText.textContent = 'Waiting for conversation to begin...';
+    reasoningText.textContent = 'Waiting for call to start...';
 
-    // Consolidated sentiment starting point
+    // Reset vibes
     vibeBar.style.width = '50%';
     vibeValue.textContent = '5';
     frustrationBar.style.width = '20%';
+    frustrationBar.classList.remove('high');
     frustrationValue.textContent = '2';
     closeReadyBar.style.width = '50%';
+    closeReadyBar.classList.remove('high');
     closeReadyValue.textContent = '5';
-    toneValue.textContent = 'vibing';
-    toneValue.className = 'tone-value neutral';
+    moodValue.textContent = 'VIBING';
+    moodValue.className = 'mood-value';
 
-    frustrationWarning.style.display = 'none';
+    dangerOverlay.style.display = 'none';
+    intelBox.style.display = 'none';
 }
 
-// Handle call end
+// Handle call end - show outcome modal
 function handleCallEnd(data) {
     console.log('handleCallEnd called with:', data);
     try {
-        // Create outcome card
-        const card = document.createElement('div');
-        card.className = `outcome-card ${data.outcome}`;
+        // Hide danger overlay
+        dangerOverlay.style.display = 'none';
 
+        // Configure outcome modal
         const outcomeEmoji = {
-            'conversion': '+',
-            'missed_opp': '-',
-            'fraud_caught': '!',
-            'fraud_missed': 'X'
+            'conversion': '🎉',
+            'missed_opp': '😬',
+            'fraud_caught': '🛡️',
+            'fraud_missed': '💀',
+            'bounced': '👋'
         };
 
-        const customer = data.customer;
-        const pointsClass = data.points >= 0 ? 'positive' : 'negative';
+        const outcomeTitle = {
+            'conversion': 'CONVERSION!',
+            'missed_opp': 'MISSED IT',
+            'fraud_caught': 'FRAUD BLOCKED!',
+            'fraud_missed': 'GOT SCAMMED',
+            'bounced': 'THEY LEFT'
+        };
 
-        card.innerHTML = `
-            <div class="outcome-header">
-                <span class="outcome-emoji">${outcomeEmoji[data.outcome] || '?'}</span>
-                <span class="outcome-title">${data.outcome_description}</span>
-                <span class="outcome-points ${pointsClass}">${data.points >= 0 ? '+' : ''}${data.points} pts</span>
+        const outcome = data.customer_bounced ? 'bounced' : data.outcome;
+
+        document.getElementById('outcome-icon').textContent = outcomeEmoji[outcome] || '❓';
+        document.getElementById('outcome-title').textContent = outcomeTitle[outcome] || data.outcome_description;
+
+        const pointsEl = document.getElementById('outcome-points');
+        pointsEl.textContent = `${data.points >= 0 ? '+' : ''}${data.points}`;
+        pointsEl.className = `outcome-points ${data.points >= 0 ? 'positive' : 'negative'}`;
+
+        // Build details
+        const customer = data.customer;
+        document.getElementById('outcome-details').innerHTML = `
+            <div class="outcome-detail-row">
+                <span class="outcome-detail-label">Seller</span>
+                <span class="outcome-detail-value">${customer.name}</span>
             </div>
-            <div class="outcome-details">
-                <div class="detail-section">
-                    <h4>Seller Profile (Hidden)</h4>
-                    <div class="detail-grid">
-                        <span class="label">Name:</span><span>${customer.name}</span>
-                        <span class="label">Tier:</span><span>${data.customer_tier_display}</span>
-                        <span class="label">Motivation:</span><span class="motivation-badge ${customer.motivation}">${customer.motivation.toUpperCase()}</span>
-                        <span class="label">Sketchy:</span><span class="fraud-badge ${customer.is_fraud ? 'yes' : 'no'}">${customer.is_fraud ? 'YES' : 'No'}</span>
-                    </div>
-                </div>
-                <div class="detail-section">
-                    <h4>Agent Performance</h4>
-                    <div class="detail-grid">
-                        <span class="label">Motivation Guess:</span>
-                        <span>
-                            ${data.agent_motivation_guess ? data.agent_motivation_guess.toUpperCase() : 'N/A'}
-                            <span class="guess-badge ${data.motivation_correct ? 'correct' : 'incorrect'}">
-                                ${data.motivation_correct ? 'Correct!' : 'Wrong'}
-                            </span>
-                        </span>
-                        <span class="label">Action:</span>
-                        <span>${data.close_attempted ? 'Closed' : data.flag_used ? 'Flagged' : data.customer_bounced ? 'Seller Left' : 'Timed Out'}</span>
-                        <span class="label">Turns:</span><span>${data.turns_used}/8</span>
-                    </div>
-                </div>
-                ${data.close_pitch ? `
-                <div class="detail-section">
-                    <h4>Close Pitch</h4>
-                    <p class="pitch-text">"${data.close_pitch}"</p>
-                </div>
-                ` : ''}
-                ${data.flag_reason ? `
-                <div class="detail-section">
-                    <h4>Flag Reason</h4>
-                    <p class="flag-text">"${data.flag_reason}"</p>
-                </div>
-                ` : ''}
-                <div class="detail-section">
-                    <h4>New Learning</h4>
-                    <p class="learning-text">${data.new_pattern}</p>
-                </div>
-                <div class="detail-section transcript-section">
-                    <h4>Full Transcript</h4>
-                    <button class="toggle-transcript" onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === 'Show' ? 'Hide' : 'Show'">Show</button>
-                    <div class="transcript-log hidden">
-                        ${data.transcript ? data.transcript.map(t => `<div class="transcript-line ${t.speaker}"><span class="speaker-label">${t.speaker.toUpperCase()}:</span> ${t.text}</div>`).join('') : '<p>No transcript available</p>'}
-                    </div>
-                </div>
+            <div class="outcome-detail-row">
+                <span class="outcome-detail-label">Property</span>
+                <span class="outcome-detail-value">${data.customer_tier_display}</span>
             </div>
+            <div class="outcome-detail-row">
+                <span class="outcome-detail-label">Real Motivation</span>
+                <span class="outcome-detail-value" style="color: ${customer.motivation === 'head' ? '#74C0FC' : customer.motivation === 'heart' ? '#FF8FB1' : '#69DB7C'}">${customer.motivation.toUpperCase()}</span>
+            </div>
+            <div class="outcome-detail-row">
+                <span class="outcome-detail-label">Agent's Guess</span>
+                <span class="outcome-detail-value">${data.agent_motivation_guess ? data.agent_motivation_guess.toUpperCase() : 'N/A'} ${data.motivation_correct ? '✓' : '✗'}</span>
+            </div>
+            <div class="outcome-detail-row">
+                <span class="outcome-detail-label">Turns Used</span>
+                <span class="outcome-detail-value">${data.turns_used}/8</span>
+            </div>
+            ${customer.is_fraud ? `
+            <div class="outcome-detail-row">
+                <span class="outcome-detail-label">Was Fraud</span>
+                <span class="outcome-detail-value" style="color: #FF6B6B">YES</span>
+            </div>
+            ` : ''}
         `;
 
-        chatMessages.appendChild(card);
-        scrollToBottom();
+        document.getElementById('learning-text').textContent = data.new_pattern || 'No learning recorded.';
+
+        // Show modal
+        outcomeModal.classList.add(outcome);
+        outcomeModal.style.display = 'flex';
 
         // Re-enable start button
         startButton.disabled = false;
     } catch (error) {
         console.error('Error in handleCallEnd:', error);
-        // Re-enable start button even on error
         startButton.disabled = false;
     }
 }
@@ -547,7 +465,18 @@ function handleCallEnd(data) {
 function startNewCall() {
     if (ws && ws.readyState === WebSocket.OPEN) {
         startButton.disabled = true;
+        outcomeModal.style.display = 'none';
+        outcomeModal.className = 'outcome-modal';
         ws.send(JSON.stringify({ type: 'new_call' }));
+    }
+}
+
+// Toggle conversation log
+function toggleLog() {
+    if (conversationLog.style.display === 'none') {
+        conversationLog.style.display = 'block';
+    } else {
+        conversationLog.style.display = 'none';
     }
 }
 
@@ -567,7 +496,7 @@ async function showLeaderboard() {
 
 function renderLeaderboard(data) {
     if (!data || data.length === 0) {
-        leaderboardContent.innerHTML = '<p class="no-data">No calls completed yet. Start some calls to see agent performance!</p>';
+        leaderboardContent.innerHTML = '<p class="no-data">No calls completed yet. Start some calls!</p>';
         return;
     }
 
@@ -585,7 +514,7 @@ function renderLeaderboard(data) {
                     <span class="agent-stats">
                         ${agent.total_calls} calls |
                         ${agent.conversion_rate}% conv |
-                        ${agent.frauds_caught} fraud caught
+                        ${agent.frauds_caught} fraud
                     </span>
                 </div>
                 <div class="agent-points ${agent.total_points >= 0 ? 'positive' : 'negative'}">
@@ -603,17 +532,18 @@ function hideLeaderboard() {
     leaderboardModal.classList.remove('active');
 }
 
-// Scroll chat to bottom
-function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
 // Event listeners
 startButton.addEventListener('click', startNewCall);
+logButton.addEventListener('click', toggleLog);
+logClose.addEventListener('click', () => { conversationLog.style.display = 'none'; });
 leaderboardButton.addEventListener('click', showLeaderboard);
 modalClose.addEventListener('click', hideLeaderboard);
 leaderboardModal.addEventListener('click', (e) => {
     if (e.target === leaderboardModal) hideLeaderboard();
+});
+outcomeClose.addEventListener('click', () => {
+    outcomeModal.style.display = 'none';
+    outcomeModal.className = 'outcome-modal';
 });
 
 // Initialize

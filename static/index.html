@@ -4,157 +4,213 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation Lab</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="main-container">
-        <header>
-            <h1>Conversation Lab</h1>
-            <p class="subtitle">Test in 18 minutes what takes 18 months in the field</p>
+    <div class="broadcast-container">
+        <!-- Top Bar -->
+        <header class="broadcast-header">
+            <div class="show-logo">CONVERSATION LAB</div>
+            <div class="episode-badge">
+                <span class="episode-label">EXPERIMENT:</span>
+                <span class="episode-title">Does matching style to motivation improve conversion?</span>
+            </div>
+            <div class="turn-display">
+                ROUND <span id="turn-count">0</span>/8
+            </div>
         </header>
 
-        <div class="hypothesis-banner">
-            <span class="hypothesis-label">Current experiment:</span>
-            <span class="hypothesis-text">Does matching communication style to customer motivation improve conversion?</span>
-        </div>
-
-        <div class="content-area">
-            <!-- Left Panel: Chat -->
-            <div class="chat-panel">
-                <div class="chat-header">
-                    <div class="agent-badge" id="agent-badge">
-                        <img class="agent-avatar-img" id="agent-avatar-img" src="" alt="" style="display: none;">
-                        <span class="agent-icon" id="agent-icon-letter">?</span>
-                        <div class="agent-info">
-                            <span class="agent-name">Waiting...</span>
-                            <span class="agent-style">Start a call</span>
-                        </div>
-                    </div>
-                    <div class="turn-counter">
-                        Turn: <span id="turn-count">0</span>/8
+        <!-- Main Stage -->
+        <div class="main-stage">
+            <!-- Agent Side -->
+            <div class="character-panel agent-panel">
+                <div class="character-frame agent-frame">
+                    <img id="agent-image" class="character-image" src="/avatars/robot.png" alt="Agent">
+                    <div class="character-name-plate">
+                        <span class="character-name" id="agent-name">???</span>
+                        <span class="character-title" id="agent-title">Waiting...</span>
                     </div>
                 </div>
-
-                <div class="chat-window" id="chat-window">
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="welcome-message">
-                            <h3>Conversation Lab</h3>
-                            <p>A behavioral science sandbox for testing customer interaction hypotheses.</p>
-                            <p><strong>Current experiment:</strong> Does matching communication style to customer motivation (Head/Heart/Hand) improve conversion rates?</p>
-                            <p>Click "Start Call" to run a trial.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="button-row">
-                    <button class="start-button" id="start-button">
-                        Start Call
-                    </button>
-                    <button class="leaderboard-button" id="leaderboard-button">
-                        Leaderboard
-                    </button>
+                <div class="speech-bubble agent-bubble" id="agent-bubble">
+                    <div class="bubble-content">Waiting for call...</div>
+                    <div class="bubble-tail"></div>
                 </div>
             </div>
 
-            <!-- Right Panel: Dashboard -->
-            <div class="dashboard-panel">
-                <!-- Agent Confidence Section -->
-                <div class="dashboard-section" id="confidence-section">
-                    <h3>Agent Assessment</h3>
-                    <div class="metric-group">
-                        <div class="metric">
-                            <span class="metric-label">Closing Confidence</span>
-                            <div class="metric-bar">
-                                <div class="metric-fill confidence-fill" id="confidence-bar" style="width: 50%"></div>
-                            </div>
-                            <span class="metric-value" id="confidence-value">5/10</span>
-                        </div>
-                    </div>
+            <!-- VS Divider -->
+            <div class="vs-divider">
+                <div class="vs-text">VS</div>
+                <div class="vs-lightning">⚡</div>
+            </div>
 
-                    <div class="motivation-guess">
-                        <span class="metric-label">Motivation Read</span>
-                        <div class="motivation-bars">
-                            <div class="motivation-item" data-motivation="head">
-                                <span class="motivation-label">HEAD</span>
-                                <div class="motivation-bar">
-                                    <div class="motivation-fill head-fill" id="head-bar" style="width: 33%"></div>
-                                </div>
-                                <span class="motivation-value" id="head-value">33%</span>
-                            </div>
-                            <div class="motivation-item" data-motivation="heart">
-                                <span class="motivation-label">HEART</span>
-                                <div class="motivation-bar">
-                                    <div class="motivation-fill heart-fill" id="heart-bar" style="width: 33%"></div>
-                                </div>
-                                <span class="motivation-value" id="heart-value">33%</span>
-                            </div>
-                            <div class="motivation-item" data-motivation="hand">
-                                <span class="motivation-label">HAND</span>
-                                <div class="motivation-bar">
-                                    <div class="motivation-fill hand-fill" id="hand-bar" style="width: 33%"></div>
-                                </div>
-                                <span class="motivation-value" id="hand-value">33%</span>
-                            </div>
-                        </div>
+            <!-- Customer Side -->
+            <div class="character-panel customer-panel">
+                <div class="character-frame customer-frame">
+                    <div class="customer-silhouette" id="customer-silhouette">
+                        <span class="silhouette-icon">?</span>
                     </div>
-
-                    <div class="reasoning-box">
-                        <span class="metric-label">Reasoning</span>
-                        <p id="reasoning-text">Waiting for call to start...</p>
+                    <div class="character-name-plate">
+                        <span class="character-name" id="customer-name">SELLER</span>
+                        <span class="character-title" id="customer-title">Unknown</span>
                     </div>
                 </div>
-
-                <!-- Customer Sentiment Section -->
-                <div class="dashboard-section" id="sentiment-section">
-                    <h3>Seller Vibes</h3>
-                    <div class="sentiment-grid">
-                        <div class="sentiment-metric">
-                            <span class="sentiment-label">Vibe Check</span>
-                            <div class="sentiment-bar">
-                                <div class="sentiment-fill vibe-fill" id="vibe-bar" style="width: 50%"></div>
-                            </div>
-                            <span class="sentiment-value" id="vibe-value">5</span>
-                        </div>
-                        <div class="sentiment-metric">
-                            <span class="sentiment-label">Frustration</span>
-                            <div class="sentiment-bar">
-                                <div class="sentiment-fill frustration-fill" id="frustration-bar" style="width: 30%"></div>
-                            </div>
-                            <span class="sentiment-value" id="frustration-value">3</span>
-                        </div>
-                        <div class="sentiment-metric">
-                            <span class="sentiment-label">Close Ready</span>
-                            <div class="sentiment-bar">
-                                <div class="sentiment-fill close-ready-fill" id="close-ready-bar" style="width: 50%"></div>
-                            </div>
-                            <span class="sentiment-value" id="close-ready-value">5</span>
-                        </div>
-                    </div>
-                    <div class="tone-display">
-                        <span class="tone-label">Mood:</span>
-                        <span class="tone-value" id="tone-value">vibing</span>
-                    </div>
-                </div>
-
-                <!-- Frustration Warning -->
-                <div class="frustration-warning" id="frustration-warning" style="display: none;">
-                    <span class="warning-icon">!</span>
-                    <span class="warning-text">High frustration - seller may leave!</span>
+                <div class="speech-bubble customer-bubble" id="customer-bubble">
+                    <div class="bubble-content">...</div>
+                    <div class="bubble-tail"></div>
                 </div>
             </div>
         </div>
 
-        <footer class="lab-footer">
-            <span>One hypothesis today. Any hypothesis tomorrow.</span>
-        </footer>
+        <!-- Psychograph Panel -->
+        <div class="psychograph-panel">
+            <div class="psychograph-header">
+                <span class="psychograph-title">AGENT'S READ</span>
+                <span class="psychograph-subtitle">Can they figure it out?</span>
+            </div>
+            <div class="psychograph-meters">
+                <div class="meter-group motivation-meters">
+                    <div class="meter-item" data-motivation="head">
+                        <span class="meter-label">HEAD</span>
+                        <div class="meter-bar">
+                            <div class="meter-fill head-fill" id="head-bar" style="width: 33%"></div>
+                        </div>
+                        <span class="meter-value" id="head-value">33%</span>
+                    </div>
+                    <div class="meter-item" data-motivation="heart">
+                        <span class="meter-label">HEART</span>
+                        <div class="meter-bar">
+                            <div class="meter-fill heart-fill" id="heart-bar" style="width: 33%"></div>
+                        </div>
+                        <span class="meter-value" id="heart-value">33%</span>
+                    </div>
+                    <div class="meter-item" data-motivation="hand">
+                        <span class="meter-label">HAND</span>
+                        <div class="meter-bar">
+                            <div class="meter-fill hand-fill" id="hand-bar" style="width: 33%"></div>
+                        </div>
+                        <span class="meter-value" id="hand-value">33%</span>
+                    </div>
+                </div>
+                <div class="confidence-meter">
+                    <span class="meter-label">CLOSE CONFIDENCE</span>
+                    <div class="meter-bar big">
+                        <div class="meter-fill confidence-fill" id="confidence-bar" style="width: 50%"></div>
+                    </div>
+                    <span class="meter-value" id="confidence-value">5/10</span>
+                </div>
+            </div>
+            <div class="reasoning-ticker" id="reasoning-ticker">
+                <span class="ticker-prefix">THINKING:</span>
+                <span class="ticker-text" id="reasoning-text">Waiting for call to start...</span>
+            </div>
+        </div>
+
+        <!-- Secret Intel Box (You Know) -->
+        <div class="intel-box" id="intel-box" style="display: none;">
+            <div class="intel-header">
+                <span class="intel-icon">👁</span>
+                <span class="intel-label">YOU KNOW</span>
+            </div>
+            <div class="intel-content">
+                <div class="intel-item">
+                    <span class="intel-key">SELLER:</span>
+                    <span class="intel-value" id="intel-name">-</span>
+                </div>
+                <div class="intel-item">
+                    <span class="intel-key">PROPERTY:</span>
+                    <span class="intel-value" id="intel-tier">-</span>
+                </div>
+                <div class="intel-item motivation-intel">
+                    <span class="intel-key">REAL MOTIVE:</span>
+                    <span class="intel-value motivation-badge" id="intel-motivation">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vibes Chyron -->
+        <div class="vibes-chyron">
+            <div class="chyron-section">
+                <span class="chyron-label">VIBE</span>
+                <div class="chyron-meter">
+                    <div class="chyron-fill vibe-fill" id="vibe-bar" style="width: 50%"></div>
+                </div>
+                <span class="chyron-value" id="vibe-value">5</span>
+            </div>
+            <div class="chyron-section danger-section">
+                <span class="chyron-label">FRUSTRATION</span>
+                <div class="chyron-meter">
+                    <div class="chyron-fill frustration-fill" id="frustration-bar" style="width: 20%"></div>
+                </div>
+                <span class="chyron-value" id="frustration-value">2</span>
+            </div>
+            <div class="chyron-mood">
+                <span class="mood-label">MOOD:</span>
+                <span class="mood-value" id="mood-value">vibing</span>
+            </div>
+            <div class="chyron-section">
+                <span class="chyron-label">CLOSE READY</span>
+                <div class="chyron-meter">
+                    <div class="chyron-fill ready-fill" id="close-ready-bar" style="width: 50%"></div>
+                </div>
+                <span class="chyron-value" id="close-ready-value">5</span>
+            </div>
+        </div>
+
+        <!-- Frustration Warning Overlay -->
+        <div class="danger-overlay" id="danger-overlay" style="display: none;">
+            <div class="danger-text">⚠️ SELLER GETTING SPICY ⚠️</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="broadcast-controls">
+            <button class="big-button start-button" id="start-button">
+                🎬 START CALL
+            </button>
+            <button class="small-button log-button" id="log-button">
+                📜 TRANSCRIPT
+            </button>
+            <button class="small-button leaderboard-button" id="leaderboard-button">
+                🏆 SCORES
+            </button>
+        </div>
+
+        <!-- Collapsible Conversation Log -->
+        <div class="conversation-log" id="conversation-log" style="display: none;">
+            <div class="log-header">
+                <span>FULL TRANSCRIPT</span>
+                <button class="log-close" id="log-close">✕</button>
+            </div>
+            <div class="log-messages" id="log-messages">
+                <!-- Messages will be added here -->
+            </div>
+        </div>
+
+        <!-- Outcome Modal -->
+        <div class="outcome-modal" id="outcome-modal" style="display: none;">
+            <div class="outcome-content">
+                <div class="outcome-header" id="outcome-header">
+                    <span class="outcome-icon" id="outcome-icon">?</span>
+                    <span class="outcome-title" id="outcome-title">RESULT</span>
+                </div>
+                <div class="outcome-points" id="outcome-points">+0</div>
+                <div class="outcome-details" id="outcome-details">
+                    <!-- Details filled by JS -->
+                </div>
+                <div class="outcome-learning">
+                    <span class="learning-label">AGENT LEARNED:</span>
+                    <p class="learning-text" id="learning-text">...</p>
+                </div>
+                <button class="outcome-close" id="outcome-close">GOT IT</button>
+            </div>
+        </div>
 
         <!-- Leaderboard Modal -->
         <div class="modal-overlay" id="leaderboard-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Agent Leaderboard</h2>
-                    <button class="modal-close" id="modal-close">&times;</button>
+                    <h2>🏆 LEADERBOARD</h2>
+                    <button class="modal-close" id="modal-close">✕</button>
                 </div>
                 <div class="modal-body" id="leaderboard-content">
                     Loading...
