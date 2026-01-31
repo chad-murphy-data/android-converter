@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation Lab</title>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/style.css?v=3">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
@@ -23,143 +23,137 @@
             </div>
         </header>
 
-        <!-- Main Stage -->
-        <div class="main-stage">
-            <!-- Agent Side -->
-            <div class="character-panel agent-panel">
-                <div class="character-frame agent-frame">
-                    <img id="agent-image" class="character-image" src="/static/characters/agent-adaptive-neutral.png" alt="Agent">
-                    <div class="character-name-plate">
-                        <span class="character-name" id="agent-name">???</span>
-                        <span class="character-title" id="agent-title">Waiting...</span>
-                    </div>
-                </div>
-                <div class="speech-bubble agent-bubble" id="agent-bubble">
-                    <div class="bubble-content">Waiting for call...</div>
-                    <div class="bubble-tail"></div>
-                </div>
+        <!-- Scene Container -->
+        <div class="scene-container">
+            <!-- Background -->
+            <div class="scene-background"></div>
+
+            <!-- Characters -->
+            <img class="scene-character scene-agent" id="agent-character"
+                 src="/static/scene/agent-adaptive.png" alt="Agent">
+            <img class="scene-character scene-customer" id="customer-character"
+                 src="/static/scene/customer-heart.png" alt="Customer">
+
+            <!-- Speech Bubbles -->
+            <div class="speech-bubble agent-bubble" id="agent-bubble">
+                <div class="bubble-content" id="agent-speech">Waiting for call...</div>
+            </div>
+            <div class="speech-bubble customer-bubble" id="customer-bubble">
+                <div class="bubble-content" id="customer-speech">...</div>
             </div>
 
-            <!-- VS Divider -->
-            <div class="vs-divider">
-                <div class="vs-text">VS</div>
-                <div class="vs-lightning">⚡</div>
-            </div>
-
-            <!-- Customer Side -->
-            <div class="character-panel customer-panel">
-                <div class="character-frame customer-frame">
-                    <img id="customer-image" class="character-image" src="/static/characters/customer-heart-neutral.png" alt="Customer">
-                    <div class="character-name-plate">
-                        <span class="character-name" id="customer-name">SELLER</span>
-                        <span class="character-title" id="customer-title">Unknown</span>
-                    </div>
-                </div>
-                <div class="speech-bubble customer-bubble" id="customer-bubble">
-                    <div class="bubble-content">...</div>
-                    <div class="bubble-tail"></div>
-                </div>
-            </div>
-
-            <!-- Spicy Indicator (inside main stage) -->
+            <!-- Spicy Indicator -->
             <div class="spicy-indicator" id="spicy-indicator">
                 <span class="spicy-icon">🌶️</span>
                 <span class="spicy-text" id="spicy-text">Getting spicy...</span>
             </div>
-        </div>
 
-        <!-- Psychograph Panel -->
-        <div class="psychograph-panel">
-            <div class="psychograph-header">
-                <span class="psychograph-title">AGENT'S READ</span>
-                <span class="psychograph-subtitle">Can they figure it out?</span>
+            <!-- Character Name Plates -->
+            <div class="scene-nameplate agent-nameplate">
+                <span class="nameplate-name" id="agent-name">???</span>
+                <span class="nameplate-title" id="agent-title">Waiting...</span>
             </div>
-            <div class="psychograph-meters">
-                <div class="meter-group motivation-meters">
-                    <div class="meter-item" data-motivation="head">
-                        <span class="meter-label">HEAD</span>
-                        <div class="meter-bar">
-                            <div class="meter-fill head-fill" id="head-bar" style="width: 33%"></div>
-                        </div>
-                        <span class="meter-value" id="head-value">33%</span>
-                    </div>
-                    <div class="meter-item" data-motivation="heart">
-                        <span class="meter-label">HEART</span>
-                        <div class="meter-bar">
-                            <div class="meter-fill heart-fill" id="heart-bar" style="width: 33%"></div>
-                        </div>
-                        <span class="meter-value" id="heart-value">33%</span>
-                    </div>
-                    <div class="meter-item" data-motivation="hand">
-                        <span class="meter-label">HAND</span>
-                        <div class="meter-bar">
-                            <div class="meter-fill hand-fill" id="hand-bar" style="width: 33%"></div>
-                        </div>
-                        <span class="meter-value" id="hand-value">33%</span>
-                    </div>
-                </div>
-                <div class="confidence-meter">
-                    <span class="meter-label">CLOSE CONFIDENCE</span>
-                    <div class="meter-bar big">
-                        <div class="meter-fill confidence-fill" id="confidence-bar" style="width: 50%"></div>
-                    </div>
-                    <span class="meter-value" id="confidence-value">5/10</span>
-                </div>
-            </div>
-            <div class="reasoning-ticker" id="reasoning-ticker">
-                <span class="ticker-prefix">THINKING:</span>
-                <span class="ticker-text" id="reasoning-text">Waiting for call to start...</span>
+            <div class="scene-nameplate customer-nameplate">
+                <span class="nameplate-name" id="customer-name">SELLER</span>
+                <span class="nameplate-title" id="customer-title">Unknown</span>
             </div>
         </div>
 
-        <!-- Secret Intel Box (You Know) -->
-        <div class="intel-box" id="intel-box" style="display: none;">
-            <div class="intel-header">
-                <span class="intel-icon">👁</span>
-                <span class="intel-label">YOU KNOW</span>
+        <!-- Metrics Overlay -->
+        <div class="metrics-overlay">
+            <!-- Psychograph Panel -->
+            <div class="psychograph-panel">
+                <div class="psychograph-header">
+                    <span class="psychograph-title">AGENT'S READ</span>
+                    <span class="psychograph-subtitle">Can they figure it out?</span>
+                </div>
+                <div class="psychograph-meters">
+                    <div class="meter-group motivation-meters">
+                        <div class="meter-item" data-motivation="head">
+                            <span class="meter-label">HEAD</span>
+                            <div class="meter-bar">
+                                <div class="meter-fill head-fill" id="head-bar" style="width: 33%"></div>
+                            </div>
+                            <span class="meter-value" id="head-value">33%</span>
+                        </div>
+                        <div class="meter-item" data-motivation="heart">
+                            <span class="meter-label">HEART</span>
+                            <div class="meter-bar">
+                                <div class="meter-fill heart-fill" id="heart-bar" style="width: 33%"></div>
+                            </div>
+                            <span class="meter-value" id="heart-value">33%</span>
+                        </div>
+                        <div class="meter-item" data-motivation="hand">
+                            <span class="meter-label">HAND</span>
+                            <div class="meter-bar">
+                                <div class="meter-fill hand-fill" id="hand-bar" style="width: 33%"></div>
+                            </div>
+                            <span class="meter-value" id="hand-value">33%</span>
+                        </div>
+                    </div>
+                    <div class="confidence-meter">
+                        <span class="meter-label">CLOSE CONFIDENCE</span>
+                        <div class="meter-bar big">
+                            <div class="meter-fill confidence-fill" id="confidence-bar" style="width: 50%"></div>
+                        </div>
+                        <span class="meter-value" id="confidence-value">5/10</span>
+                    </div>
+                </div>
+                <div class="reasoning-ticker" id="reasoning-ticker">
+                    <span class="ticker-prefix">THINKING:</span>
+                    <span class="ticker-text" id="reasoning-text">Waiting for call to start...</span>
+                </div>
             </div>
-            <div class="intel-content">
-                <div class="intel-item">
-                    <span class="intel-key">SELLER:</span>
-                    <span class="intel-value" id="intel-name">-</span>
-                </div>
-                <div class="intel-item">
-                    <span class="intel-key">PROPERTY:</span>
-                    <span class="intel-value" id="intel-tier">-</span>
-                </div>
-                <div class="intel-item motivation-intel">
-                    <span class="intel-key">REAL MOTIVE:</span>
-                    <span class="intel-value motivation-badge" id="intel-motivation">-</span>
-                </div>
-            </div>
-        </div>
 
-        <!-- Vibes Chyron -->
-        <div class="vibes-chyron">
-            <div class="chyron-section">
-                <span class="chyron-label">VIBE</span>
-                <div class="chyron-meter">
-                    <div class="chyron-fill vibe-fill" id="vibe-bar" style="width: 50%"></div>
+            <!-- Secret Intel Box (You Know) -->
+            <div class="intel-box" id="intel-box" style="display: none;">
+                <div class="intel-header">
+                    <span class="intel-icon">👁</span>
+                    <span class="intel-label">YOU KNOW</span>
                 </div>
-                <span class="chyron-value" id="vibe-value">5</span>
-            </div>
-            <div class="chyron-section danger-section">
-                <span class="chyron-label">FRUSTRATION</span>
-                <div class="chyron-meter">
-                    <div class="chyron-fill frustration-fill" id="frustration-bar" style="width: 20%"></div>
+                <div class="intel-content">
+                    <div class="intel-item">
+                        <span class="intel-key">SELLER:</span>
+                        <span class="intel-value" id="intel-name">-</span>
+                    </div>
+                    <div class="intel-item">
+                        <span class="intel-key">PROPERTY:</span>
+                        <span class="intel-value" id="intel-tier">-</span>
+                    </div>
+                    <div class="intel-item motivation-intel">
+                        <span class="intel-key">REAL MOTIVE:</span>
+                        <span class="intel-value motivation-badge" id="intel-motivation">-</span>
+                    </div>
                 </div>
-                <span class="chyron-value" id="frustration-value">2</span>
             </div>
-            <div class="chyron-mood">
-                <span class="mood-label">MOOD:</span>
-                <span class="mood-value" id="mood-value">vibing</span>
-            </div>
-            <div class="chyron-section">
-                <span class="chyron-label">CLOSE READY</span>
-                <div class="chyron-meter">
-                    <div class="chyron-fill ready-fill" id="close-ready-bar" style="width: 50%"></div>
+
+            <!-- Vibes Chyron -->
+            <div class="vibes-chyron">
+                <div class="chyron-section">
+                    <span class="chyron-label">VIBE</span>
+                    <div class="chyron-meter">
+                        <div class="chyron-fill vibe-fill" id="vibe-bar" style="width: 50%"></div>
+                    </div>
+                    <span class="chyron-value" id="vibe-value">5</span>
                 </div>
-                <span class="chyron-value" id="close-ready-value">5</span>
+                <div class="chyron-section danger-section">
+                    <span class="chyron-label">FRUSTRATION</span>
+                    <div class="chyron-meter">
+                        <div class="chyron-fill frustration-fill" id="frustration-bar" style="width: 20%"></div>
+                    </div>
+                    <span class="chyron-value" id="frustration-value">2</span>
+                </div>
+                <div class="chyron-mood">
+                    <span class="mood-label">MOOD:</span>
+                    <span class="mood-value" id="mood-value">vibing</span>
+                </div>
+                <div class="chyron-section">
+                    <span class="chyron-label">CLOSE READY</span>
+                    <div class="chyron-meter">
+                        <div class="chyron-fill ready-fill" id="close-ready-bar" style="width: 50%"></div>
+                    </div>
+                    <span class="chyron-value" id="close-ready-value">5</span>
+                </div>
             </div>
         </div>
 
@@ -220,6 +214,6 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=2"></script>
+    <script src="/static/script.js?v=3"></script>
 </body>
 </html>

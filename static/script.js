@@ -1,21 +1,26 @@
-// Cartoon Broadcast UI v2 - Expression-switching with Anime.js animations
+// Animated Scene UI - Robots in Office with Idle/Talking Animations
 
 let ws = null;
 let currentAgentStyle = null;
 let currentAgentType = null; // 'adaptive' or 'traditional'
 let currentCustomerMotivation = null;
-let currentAgentExpression = 'neutral';
-let currentCustomerExpression = 'neutral';
-let isAgentThinking = false;
 let transcript = [];
 
-// DOM Elements - Main Stage
-const agentImage = document.getElementById('agent-image');
-const customerImage = document.getElementById('customer-image');
+// Animation state
+let agentIdleAnim = null;
+let customerIdleAnim = null;
+let agentTalkingAnim = null;
+let customerTalkingAnim = null;
+
+// DOM Elements - Scene
+const agentCharacter = document.getElementById('agent-character');
+const customerCharacter = document.getElementById('customer-character');
 const agentName = document.getElementById('agent-name');
 const agentTitle = document.getElementById('agent-title');
 const agentBubble = document.getElementById('agent-bubble');
+const agentSpeech = document.getElementById('agent-speech');
 const customerBubble = document.getElementById('customer-bubble');
+const customerSpeech = document.getElementById('customer-speech');
 const customerName = document.getElementById('customer-name');
 const customerTitle = document.getElementById('customer-title');
 
@@ -65,10 +70,7 @@ const leaderboardModal = document.getElementById('leaderboard-modal');
 const modalClose = document.getElementById('modal-close');
 const leaderboardContent = document.getElementById('leaderboard-content');
 
-// Flavor text arrays
-const THINKING_PREFIXES = ['Hmm...', 'Interesting...', 'My read:', 'Gut feeling:', 'Sensing that', 'Noticing', 'Wait...', 'Aha!'];
-
-// ===== EXPRESSION LOGIC =====
+// ===== CHARACTER MAPPING =====
 
 // Map backend agent types to frontend character types
 function getAgentCharacterType(agentStyle) {
@@ -76,109 +78,83 @@ function getAgentCharacterType(agentStyle) {
     return adaptiveTypes.includes(agentStyle) ? 'adaptive' : 'traditional';
 }
 
-// Get agent expression based on confidence and sentiment
-function getAgentExpression(confidence, sentiment, isThinking) {
-    if (isThinking) {
-        return 'thinking';
-    }
+// ===== IDLE ANIMATIONS =====
 
-    const maxConfidence = Math.max(
-        confidence.motivation_guess?.head || 0,
-        confidence.motivation_guess?.heart || 0,
-        confidence.motivation_guess?.hand || 0
-    );
+function startIdleAnimations() {
+    // Agent idle - gentle bob
+    agentIdleAnim = anime({
+        targets: agentCharacter,
+        translateY: [-3, 3],
+        duration: 2000,
+        easing: 'easeInOutSine',
+        direction: 'alternate',
+        loop: true
+    });
 
-    // High confidence + good sentiment = happy
-    if (maxConfidence >= 60 && sentiment.likelihood_to_convert >= 7) {
-        return 'happy';
-    }
-
-    // Customer frustrated = agent worried
-    if (sentiment.frustration >= 6) {
-        return 'worried';
-    }
-
-    // Low confidence = thinking
-    if (maxConfidence < 45) {
-        return 'thinking';
-    }
-
-    return 'neutral';
-}
-
-// Get customer expression based on motivation and sentiment
-function getCustomerExpression(motivation, sentiment) {
-    const frustration = sentiment.frustration || 5;
-    const satisfaction = sentiment.satisfaction || 5;
-    const trust = sentiment.trust || 5;
-
-    if (motivation === 'head') {
-        if (frustration >= 7) return 'frustrated';
-        if (satisfaction >= 7 && trust >= 6) return 'satisfied';
-        if (trust < 4 || satisfaction < 4) return 'skeptical';
-        return 'neutral';
-    }
-
-    if (motivation === 'heart') {
-        if (frustration >= 7) return 'upset';
-        if (satisfaction >= 7) return 'happy';
-        if (trust < 5) return 'uncertain';
-        return 'neutral';
-    }
-
-    if (motivation === 'hand') {
-        if (frustration >= 7) return 'frustrated';
-        if (satisfaction >= 7) return 'satisfied';
-        if (frustration >= 5) return 'impatient';
-        return 'neutral';
-    }
-
-    return 'neutral';
-}
-
-// Update agent image with expression
-function updateAgentExpression(expression) {
-    if (expression === currentAgentExpression) return;
-
-    const src = `/static/characters/agent-${currentAgentType}-${expression}.png`;
-
-    if (agentImage.src !== src) {
-        agentImage.src = src;
-        currentAgentExpression = expression;
-        animateExpressionChange(agentImage);
-    }
-}
-
-// Update customer image with expression
-function updateCustomerExpression(expression) {
-    if (expression === currentCustomerExpression || !currentCustomerMotivation) return;
-
-    const src = `/static/characters/customer-${currentCustomerMotivation}-${expression}.png`;
-
-    if (customerImage.src !== src) {
-        customerImage.src = src;
-        currentCustomerExpression = expression;
-        animateExpressionChange(customerImage);
-
-        // Update border color class
-        customerImage.className = `character-image ${currentCustomerMotivation}`;
-    }
-}
-
-// ===== ANIME.JS ANIMATIONS =====
-
-// Expression change pop animation
-function animateExpressionChange(element) {
-    anime({
-        targets: element,
-        scale: [0.85, 1.05, 1],
-        duration: 400,
-        easing: 'easeOutElastic(1, 0.5)'
+    // Customer idle - slightly offset timing
+    customerIdleAnim = anime({
+        targets: customerCharacter,
+        translateY: [-3, 3],
+        duration: 2200,
+        easing: 'easeInOutSine',
+        direction: 'alternate',
+        loop: true,
+        delay: 500
     });
 }
 
-// Speech bubble pop-in animation
-function animateBubblePop(bubbleElement) {
+// ===== TALKING ANIMATIONS =====
+
+function startTalkingAnimation(character) {
+    const element = character === 'agent' ? agentCharacter : customerCharacter;
+
+    // Stop idle animation for this character
+    anime.remove(element);
+
+    // Start talking animation - more energetic bob + slight scale
+    const talkingAnim = anime({
+        targets: element,
+        translateY: [-5, 5],
+        scale: [1, 1.02, 1],
+        duration: 400,
+        easing: 'easeInOutSine',
+        direction: 'alternate',
+        loop: true
+    });
+
+    if (character === 'agent') {
+        agentTalkingAnim = talkingAnim;
+    } else {
+        customerTalkingAnim = talkingAnim;
+    }
+}
+
+function stopTalkingAnimation(character) {
+    const element = character === 'agent' ? agentCharacter : customerCharacter;
+
+    anime.remove(element);
+
+    // Return to idle
+    const idleAnim = anime({
+        targets: element,
+        translateY: [-3, 3],
+        scale: 1,
+        duration: 2000,
+        easing: 'easeInOutSine',
+        direction: 'alternate',
+        loop: true
+    });
+
+    if (character === 'agent') {
+        agentIdleAnim = idleAnim;
+    } else {
+        customerIdleAnim = idleAnim;
+    }
+}
+
+// ===== SPEECH BUBBLE ANIMATIONS =====
+
+function showSpeechBubble(bubbleElement) {
     anime({
         targets: bubbleElement,
         scale: [0, 1.1, 1],
@@ -188,7 +164,17 @@ function animateBubblePop(bubbleElement) {
     });
 }
 
-// Meter fill animation
+function animateBubblePop(bubbleElement) {
+    anime({
+        targets: bubbleElement,
+        scale: [0.9, 1.05, 1],
+        duration: 300,
+        easing: 'easeOutElastic(1, 0.5)'
+    });
+}
+
+// ===== METER ANIMATIONS =====
+
 function animateMeterFill(meterElement, targetWidth) {
     anime({
         targets: meterElement,
@@ -198,7 +184,8 @@ function animateMeterFill(meterElement, targetWidth) {
     });
 }
 
-// Score counting animation
+// ===== SCORE ANIMATION =====
+
 function animateScoreCount(element, targetValue) {
     const obj = { value: 0 };
     anime({
@@ -214,14 +201,25 @@ function animateScoreCount(element, targetValue) {
     });
 }
 
-// Victory confetti celebration
+// ===== CELEBRATION =====
+
 function celebrateConversion() {
     if (typeof confetti === 'undefined') return;
 
+    // Confetti burst
     confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 }
+    });
+
+    // Agent celebration bounce
+    anime({
+        targets: agentCharacter,
+        translateY: [-30, 0],
+        scale: [1.1, 1],
+        duration: 600,
+        easing: 'easeOutBounce'
     });
 
     setTimeout(() => {
@@ -243,7 +241,6 @@ function celebrateConversion() {
 // ===== SPICY INDICATOR =====
 
 function updateSpicyIndicator(frustration) {
-    // Remove all level classes
     spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
 
     if (frustration >= 10) {
@@ -256,7 +253,6 @@ function updateSpicyIndicator(frustration) {
         spicyIndicator.classList.add('active', 'level-8');
         spicyText.textContent = "Getting a little spicy";
     }
-    // Below 8: hidden (no class added)
 }
 
 // ===== WEBSOCKET =====
@@ -268,6 +264,7 @@ function connect() {
     ws.onopen = () => {
         console.log('Connected to server');
         startButton.disabled = false;
+        startIdleAnimations();
     };
 
     ws.onclose = () => {
@@ -324,23 +321,20 @@ function handleCallStart(data) {
 
     // Update agent info
     const agent = data.agent;
-    const agentInfo = data.agent_info;
     currentAgentStyle = agent.style;
     currentAgentType = getAgentCharacterType(agent.style);
-    currentAgentExpression = 'neutral';
 
     // Set agent character image
-    agentImage.src = `/static/characters/agent-${currentAgentType}-neutral.png`;
+    agentCharacter.src = `/static/scene/agent-${currentAgentType}.png`;
     agentName.textContent = agent.name;
     agentTitle.textContent = currentAgentType === 'adaptive' ? 'Adaptive' : 'Traditional';
 
     // Reset agent bubble
-    setBubbleContent('agent', 'Waiting for call...');
+    agentSpeech.textContent = 'Waiting for call...';
 
     // Show intel box with customer info (spectator mode)
     if (data.customer_preview) {
         currentCustomerMotivation = data.customer_preview.motivation;
-        currentCustomerExpression = 'neutral';
 
         intelName.textContent = data.customer_preview.name;
         intelTier.textContent = data.customer_preview.tier_display;
@@ -350,10 +344,10 @@ function handleCallStart(data) {
         intelBox.style.display = 'block';
 
         // Set customer character image based on motivation
-        customerImage.src = `/static/characters/customer-${currentCustomerMotivation}-neutral.png`;
-        customerImage.className = `character-image ${currentCustomerMotivation}`;
+        customerCharacter.src = `/static/scene/customer-${currentCustomerMotivation}.png`;
 
         // Update customer name plate
+        customerName.textContent = data.customer_preview.name;
         const motivationLabels = { head: 'Analytical', heart: 'Emotional', hand: 'Pragmatic' };
         customerTitle.textContent = motivationLabels[currentCustomerMotivation] || 'Unknown';
 
@@ -364,39 +358,30 @@ function handleCallStart(data) {
     // Reset dashboard
     resetDashboard();
 
-    // Reset customer display
-    customerName.textContent = 'SELLER';
-    setBubbleContent('customer', '...');
+    // Reset speech bubbles
+    customerSpeech.textContent = '...';
+
+    // Restart idle animations
+    startIdleAnimations();
 }
 
 function setBubbleContent(speaker, text, isTyping = false) {
-    const bubble = speaker === 'agent' ? agentBubble : customerBubble;
-    const content = bubble.querySelector('.bubble-content');
+    const speechEl = speaker === 'agent' ? agentSpeech : customerSpeech;
+    const bubbleEl = speaker === 'agent' ? agentBubble : customerBubble;
 
     if (isTyping) {
-        bubble.classList.add('typing');
-        content.innerHTML = `
+        bubbleEl.classList.add('typing');
+        speechEl.innerHTML = `
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
         `;
-
-        // Set agent to thinking expression while typing
-        if (speaker === 'agent') {
-            isAgentThinking = true;
-            updateAgentExpression('thinking');
-        }
+        startTalkingAnimation(speaker);
     } else {
-        bubble.classList.remove('typing');
-        content.textContent = text;
-
-        // Clear thinking state
-        if (speaker === 'agent') {
-            isAgentThinking = false;
-        }
-
-        // Animate bubble pop
-        animateBubblePop(bubble);
+        bubbleEl.classList.remove('typing');
+        speechEl.textContent = text;
+        stopTalkingAnimation(speaker);
+        animateBubblePop(bubbleEl);
     }
 }
 
@@ -431,10 +416,9 @@ function addMessage(speaker, text, isBounce = false, isEnd = false) {
     logMessages.scrollTop = logMessages.scrollHeight;
 
     // Handle bounce - customer leaves frustrated
-    if (isBounce && currentCustomerMotivation) {
-        updateCustomerExpression('frustrated');
+    if (isBounce) {
         anime({
-            targets: customerBubble,
+            targets: customerCharacter,
             translateX: [0, -10, 10, -10, 0],
             duration: 500,
             easing: 'easeInOutSine'
@@ -509,17 +493,8 @@ function updateDashboard(data) {
     moodValue.textContent = funMood;
     moodValue.className = `mood-value ${getMoodClass(sentiment.emotional_tone)}`;
 
-    // Update spicy indicator (replaces danger overlay)
+    // Update spicy indicator
     updateSpicyIndicator(sentiment.frustration);
-
-    // Update character expressions
-    const agentExpr = getAgentExpression(confidence, sentiment, isAgentThinking);
-    updateAgentExpression(agentExpr);
-
-    if (currentCustomerMotivation) {
-        const customerExpr = getCustomerExpression(currentCustomerMotivation, sentiment);
-        updateCustomerExpression(customerExpr);
-    }
 }
 
 function getFunMood(tone) {
@@ -596,11 +571,6 @@ function resetDashboard() {
     spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
 
     intelBox.style.display = 'none';
-
-    // Reset expressions
-    currentAgentExpression = 'neutral';
-    currentCustomerExpression = 'neutral';
-    isAgentThinking = false;
 }
 
 // ===== CALL END =====
@@ -610,6 +580,10 @@ function handleCallEnd(data) {
     try {
         // Hide spicy indicator
         spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
+
+        // Stop talking animations, return to idle
+        stopTalkingAnimation('agent');
+        stopTalkingAnimation('customer');
 
         // Configure outcome modal
         const outcomeEmoji = {
@@ -676,8 +650,6 @@ function handleCallEnd(data) {
         // Celebrate conversion with confetti!
         if (outcome === 'conversion') {
             celebrateConversion();
-            updateAgentExpression('happy');
-            updateCustomerExpression('satisfied');
         }
 
         // Animate score counting
