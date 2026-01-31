@@ -23,6 +23,7 @@ from game import (
     CallState,
     check_close_attempt,
     check_flag_attempt,
+    truncate_after_close,
     strip_action_tags,
     sanitize_display_text,
     assess_motivation_alignment,
@@ -246,6 +247,10 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         # Check for close or flag
         close_attempted, close_pitch = check_close_attempt(agent_text)
         flag_used, flag_reason = check_flag_attempt(agent_text)
+
+        # Truncate after close/flag tag to prevent rambling
+        if close_attempted or flag_used:
+            agent_text = truncate_after_close(agent_text)
 
         if close_attempted:
             state.close_attempted = True

@@ -96,6 +96,28 @@ def check_flag_attempt(text: str) -> tuple[bool, str]:
     return False, ""
 
 
+def truncate_after_close(text: str) -> str:
+    """Truncate text after [CLOSE:] or [FLAG:] tag to prevent rambling.
+
+    Args:
+        text: Agent response text
+
+    Returns:
+        Text truncated to include only content up through the close tag
+    """
+    # Find [CLOSE: ...] tag
+    close_match = re.search(r'\[CLOSE:\s*[^\]]+\]', text, re.IGNORECASE)
+    if close_match:
+        return text[:close_match.end()]
+
+    # Find [FLAG: ...] tag
+    flag_match = re.search(r'\[FLAG:\s*[^\]]+\]', text, re.IGNORECASE)
+    if flag_match:
+        return text[:flag_match.end()]
+
+    return text
+
+
 def strip_action_tags(text: str) -> str:
     """Remove [CLOSE: ...] and [FLAG: ...] tags from text for display.
 
