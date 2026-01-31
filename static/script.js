@@ -111,23 +111,14 @@ function startTalkingAnimation(character) {
     // Stop idle animation for this character
     anime.remove(element);
 
-    // Add speaking glow class
+    // Add speaking glow class (CSS handles the glow animation)
     element.classList.add('speaking');
 
-    // Start talking animation - gentle bob only (no scale)
-    const talkingAnim = anime({
-        targets: element,
-        translateY: [-4, 4],
-        duration: 500,
-        easing: 'easeInOutSine',
-        direction: 'alternate',
-        loop: true
-    });
-
+    // No bobbing - just the glow effect from CSS
     if (character === 'agent') {
-        agentTalkingAnim = talkingAnim;
+        agentTalkingAnim = null;
     } else {
-        customerTalkingAnim = talkingAnim;
+        customerTalkingAnim = null;
     }
 }
 
