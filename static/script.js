@@ -360,6 +360,61 @@ function handleCallStart(data) {
     startIdleAnimations();
 }
 
+function truncateAtSentence(text, maxChars = 280) {
+    // If text is short enough, return as-is
+    if (text.length <= maxChars) {
+        return { display: text, truncated: false, full: text };
+    }
+
+    // Find the last sentence boundary before maxChars
+    const sentenceEnders = ['. ', '! ', '? ', '." ', '!" ', '?" '];
+    let lastBoundary = -1;
+
+    for (const ender of sentenceEnders) {
+        const idx = text.lastIndexOf(ender, maxChars);
+        if (idx > lastBoundary) {
+            lastBoundary = idx + ender.length - 1;  // Include the punctuation
+        }
+    }
+
+    // Also check for sentence enders at end of text
+    const endEnders = ['.', '!', '?'];
+    for (const ender of endEnders) {
+        const idx = text.lastIndexOf(ender, maxChars);
+        if (idx > lastBoundary && (idx === text.length - 1 || text[idx + 1] === ' ' || text[idx + 1] === '"')) {
+            lastBoundary = idx + 1;
+        }
+    }
+
+    // If no sentence boundary found or it's too early, fall back to last space
+    if (lastBoundary === -1 || lastBoundary < maxChars * 0.5) {
+        lastBoundary = text.lastIndexOf(' ', maxChars);
+        if (lastBoundary === -1) lastBoundary = maxChars;
+    }
+
+    const truncated = text.slice(0, lastBoundary).trim();
+
+    return {
+        display: truncated + '...',
+        truncated: true,
+        full: text
+    };
+}
+
+function escapeForAttr(text) {
+    return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+}
+
+function expandBubble(btn) {
+    const bubble = btn.closest('.speech-bubble');
+    const fullText = btn.dataset.fullText;
+    const textSpan = bubble.querySelector('.bubble-text');
+    if (textSpan && fullText) {
+        textSpan.textContent = fullText;
+    }
+    btn.remove();
+}
+
 function setBubbleContent(speaker, text, isTyping = false) {
     const speechEl = speaker === 'agent' ? agentSpeech : customerSpeech;
     const bubbleEl = speaker === 'agent' ? agentBubble : customerBubble;
@@ -374,7 +429,16 @@ function setBubbleContent(speaker, text, isTyping = false) {
         startTalkingAnimation(speaker);
     } else {
         bubbleEl.classList.remove('typing');
-        speechEl.textContent = text;
+
+        // Truncate at sentence boundary if too long
+        const result = truncateAtSentence(text, 280);
+
+        if (result.truncated) {
+            speechEl.innerHTML = `<span class="bubble-text">${result.display}</span><button class="expand-btn" onclick="expandBubble(this)" data-full-text="${escapeForAttr(result.full)}">more</button>`;
+        } else {
+            speechEl.innerHTML = `<span class="bubble-text">${result.display}</span>`;
+        }
+
         stopTalkingAnimation(speaker);
         animateBubblePop(bubbleEl);
     }
@@ -605,7 +669,7 @@ function handleCallEnd(data) {
         const pointsEl = document.getElementById('outcome-points');
         pointsEl.className = `outcome-points ${data.points >= 0 ? 'positive' : 'negative'}`;
 
-        // Populate motivation comparison
+        // Populate motivation comparison (horizontal layout)
         const customer = data.customer;
         const agentGuess = data.agent_motivation_guess || 'unknown';
         const actualMotivation = customer.motivation;
@@ -619,42 +683,28 @@ function handleCallEnd(data) {
         actualEl.textContent = actualMotivation.toUpperCase();
         actualEl.className = `motivation-badge ${actualMotivation}`;
 
-        const resultEl = document.getElementById('motivation-result');
+        const matchEl = document.getElementById('motivation-match');
         if (isCorrect) {
-            resultEl.className = 'motivation-result correct';
-            resultEl.innerHTML = '<span class="result-icon">✓</span><span class="result-text">Correct read! +2 bonus</span>';
+            matchEl.textContent = '✓';
+            matchEl.className = 'motivation-match correct';
         } else {
-            resultEl.className = 'motivation-result incorrect';
-            resultEl.innerHTML = '<span class="result-icon">✗</span><span class="result-text">Misread the customer</span>';
+            matchEl.textContent = '✗';
+            matchEl.className = 'motivation-match incorrect';
         }
 
-        // Build compact details (removed redundant motivation info)
-        document.getElementById('outcome-details').innerHTML = `
-            <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Seller</span>
-                <span class="outcome-detail-value">${customer.name}</span>
-            </div>
-            <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Property</span>
-                <span class="outcome-detail-value">${data.customer_tier_display}</span>
-            </div>
-            <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Turns Used</span>
-                <span class="outcome-detail-value">${data.turns_used}/8</span>
-            </div>
-            ${customer.is_fraud ? `
-            <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Problematic</span>
-                <span class="outcome-detail-value" style="color: #FF6B6B">YES</span>
-            </div>
-            ` : ''}
+        // Build compact call details (single line)
+        const fraudBadge = customer.is_fraud ? ' <span style="color: #FF6B6B">⚠</span>' : '';
+        document.getElementById('call-details').innerHTML = `
+            <span class="detail-item"><strong>${customer.name}</strong></span>
+            <span class="divider">|</span>
+            <span class="detail-item">${data.customer_tier_display}</span>
+            <span class="divider">|</span>
+            <span class="detail-item">${data.turns_used} turns${fraudBadge}</span>
         `;
 
-        // Generate exec insight based on outcome
-        const insightText = generateExecInsight(outcome, isCorrect, agentGuess, actualMotivation, data);
-        document.getElementById('insight-text').textContent = insightText;
-
-        document.getElementById('learning-text').textContent = data.new_pattern || 'No learning recorded.';
+        // Generate rich exec insight with takeaway
+        const insightHtml = generateExecInsight(outcome, isCorrect, agentGuess, actualMotivation, data);
+        document.getElementById('insight-text').innerHTML = insightHtml;
 
         // Show modal
         outcomeModal.classList.add(outcome);
@@ -679,42 +729,73 @@ function handleCallEnd(data) {
 }
 
 function generateExecInsight(outcome, motivationCorrect, agentGuess, actualMotivation, data) {
-    // Generate a brief executive insight based on the call outcome
-    const motivationDescriptions = {
-        head: 'data-driven buyers who need logical justification',
-        heart: 'emotional buyers who need connection first',
-        hand: 'efficiency-focused buyers who hate wasted time'
+    // Generate a 2-3 sentence executive narrative with a punchy takeaway
+    const turnsUsed = data.turns_used || 8;
+
+    const motivationHooks = {
+        head: 'data and methodology',
+        heart: 'trust and emotional connection',
+        hand: 'speed and decisiveness'
     };
 
+    const actualHook = motivationHooks[actualMotivation] || 'their core needs';
+    const readHook = motivationHooks[agentGuess] || 'a different approach';
+
+    let narrative = '';
+    let takeaway = '';
+
     if (outcome === 'conversion' && motivationCorrect) {
-        return `Perfect execution. ${actualMotivation.toUpperCase()} customers respond to exactly what this agent delivered.`;
+        // BEST CASE: Correct read + conversion
+        if (turnsUsed <= 4) {
+            narrative = `Quick close in just ${turnsUsed} turns. The agent spotted a ${actualMotivation.toUpperCase()} customer early and leaned into ${actualHook}.`;
+            takeaway = 'Fast reads = fast closes.';
+        } else {
+            narrative = `Solid conversion after ${turnsUsed} turns of building rapport. The agent correctly identified ${actualHook} as the key and matched their approach.`;
+            takeaway = 'Read the room, match the energy.';
+        }
+    } else if (outcome === 'conversion' && !motivationCorrect) {
+        // INTERESTING: Wrong read but still converted
+        narrative = `Converted despite reading ${agentGuess.toUpperCase()} when the customer was actually ${actualMotivation.toUpperCase()}. The agent's authenticity overcame the mismatch.`;
+        takeaway = 'Being genuine matters more than being perfect.';
+    } else if (outcome === 'missed_opp' && motivationCorrect) {
+        // FRUSTRATING: Right read but still lost
+        if (turnsUsed >= 7) {
+            narrative = `Correct read (${actualMotivation.toUpperCase()}) but couldn't close. The agent waited too long to ask for the business—momentum faded.`;
+            takeaway = 'Reading isn\'t enough. You have to close.';
+        } else {
+            narrative = `Correct read (${actualMotivation.toUpperCase()}) but the execution fell short. The customer wanted ${actualHook} but didn't get enough of it.`;
+            takeaway = 'Right diagnosis, wrong prescription.';
+        }
+    } else if (outcome === 'missed_opp' && !motivationCorrect) {
+        // MISS: Wrong read + no conversion
+        if (agentGuess === 'head' && actualMotivation === 'heart') {
+            narrative = `The agent went analytical when the customer needed emotional connection. Data and process talk bounced off someone who wanted to feel heard.`;
+            takeaway = 'You can\'t logic someone into trust.';
+        } else if (agentGuess === 'heart' && actualMotivation === 'hand') {
+            narrative = `Too much rapport-building for a customer who just wanted action. While the agent was building connection, the customer was checking their watch.`;
+            takeaway = 'Some people don\'t want a relationship—they want results.';
+        } else if (agentGuess === 'hand' && actualMotivation === 'heart') {
+            narrative = `The agent's efficiency felt cold to a customer seeking partnership. Speed and decisiveness read as dismissive to someone who needed to feel valued.`;
+            takeaway = 'Fast isn\'t always better.';
+        } else {
+            narrative = `Misread as ${agentGuess.toUpperCase()}, actually ${actualMotivation.toUpperCase()}. The customer needed ${actualHook}, but got ${readHook} instead.`;
+            takeaway = 'Wrong lens, wrong outcome.';
+        }
+    } else if (outcome === 'bounced') {
+        narrative = `Customer bailed before the close—frustration built too fast. ${actualMotivation.toUpperCase()} customers need a specific pace and approach.`;
+        takeaway = 'Patience is part of the pitch.';
+    } else if (outcome === 'fraud_caught') {
+        narrative = `Good instincts. The agent recognized the red flags early and protected the business from a problematic listing.`;
+        takeaway = 'Trust your gut when something feels off.';
+    } else if (outcome === 'fraud_missed') {
+        narrative = `Missed warning signs. The deal went through, but the red flags were there. Review the conversation for signals that should have triggered caution.`;
+        takeaway = 'Not every listing is worth taking.';
+    } else {
+        narrative = `Analyze what worked and what didn't to improve future performance.`;
+        takeaway = 'Every call teaches something.';
     }
 
-    if (outcome === 'conversion' && !motivationCorrect) {
-        return `Got lucky - the close worked despite misreading the customer. Study ${actualMotivation.toUpperCase()} signals for consistency.`;
-    }
-
-    if (outcome === 'missed_opp' && !motivationCorrect) {
-        return `Misread cost the deal. ${actualMotivation.toUpperCase()} customers are ${motivationDescriptions[actualMotivation]}. Adjust approach accordingly.`;
-    }
-
-    if (outcome === 'missed_opp' && motivationCorrect) {
-        return `Read was right, execution was off. Knew they were ${actualMotivation.toUpperCase()} but didn't close effectively.`;
-    }
-
-    if (outcome === 'bounced') {
-        return `Customer bailed - frustration built too fast. ${actualMotivation.toUpperCase()} customers need a different pace.`;
-    }
-
-    if (outcome === 'fraud_caught') {
-        return `Good instincts. Recognized the red flags and protected the business.`;
-    }
-
-    if (outcome === 'fraud_missed') {
-        return `Missed warning signs. Review the conversation for red flags that should have triggered caution.`;
-    }
-
-    return `Analyze what worked and what didn't to improve future performance.`;
+    return `${narrative} <span class="takeaway">${takeaway}</span>`;
 }
 
 // ===== UI CONTROLS =====
