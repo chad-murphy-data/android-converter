@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation Lab</title>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="stylesheet" href="/static/style.css?v=4">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
@@ -181,17 +181,44 @@
             </div>
         </div>
 
-        <!-- Outcome Modal -->
+        <!-- Outcome Modal (The Debrief) -->
         <div class="outcome-modal" id="outcome-modal" style="display: none;">
             <div class="outcome-content">
+                <div class="debrief-header">
+                    <span class="debrief-label">THE DEBRIEF</span>
+                </div>
                 <div class="outcome-header" id="outcome-header">
                     <span class="outcome-icon" id="outcome-icon">?</span>
                     <span class="outcome-title" id="outcome-title">RESULT</span>
                 </div>
                 <div class="outcome-points" id="outcome-points">+0</div>
+
+                <!-- Motivation Comparison -->
+                <div class="motivation-comparison" id="motivation-comparison">
+                    <div class="motivation-row">
+                        <span class="motivation-label">Agent Read:</span>
+                        <span class="motivation-badge agent-guess" id="debrief-agent-guess">HEAD</span>
+                    </div>
+                    <div class="motivation-row">
+                        <span class="motivation-label">Reality:</span>
+                        <span class="motivation-badge actual-motivation" id="debrief-actual">HEART</span>
+                    </div>
+                    <div class="motivation-result" id="motivation-result">
+                        <span class="result-icon">✓</span>
+                        <span class="result-text">Correct read!</span>
+                    </div>
+                </div>
+
                 <div class="outcome-details" id="outcome-details">
                     <!-- Details filled by JS -->
                 </div>
+
+                <!-- Exec Insight -->
+                <div class="exec-insight" id="exec-insight">
+                    <span class="insight-label">💡 EXEC INSIGHT</span>
+                    <p class="insight-text" id="insight-text">Loading analysis...</p>
+                </div>
+
                 <div class="outcome-learning">
                     <span class="learning-label">AGENT LEARNED:</span>
                     <p class="learning-text" id="learning-text">...</p>
@@ -214,6 +241,6 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=3"></script>
+    <script src="/static/script.js?v=4"></script>
 </body>
 </html>

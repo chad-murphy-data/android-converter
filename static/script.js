@@ -111,12 +111,14 @@ function startTalkingAnimation(character) {
     // Stop idle animation for this character
     anime.remove(element);
 
-    // Start talking animation - more energetic bob + slight scale
+    // Add speaking glow class
+    element.classList.add('speaking');
+
+    // Start talking animation - gentle bob only (no scale)
     const talkingAnim = anime({
         targets: element,
-        translateY: [-5, 5],
-        scale: [1, 1.02, 1],
-        duration: 400,
+        translateY: [-4, 4],
+        duration: 500,
         easing: 'easeInOutSine',
         direction: 'alternate',
         loop: true
@@ -134,11 +136,13 @@ function stopTalkingAnimation(character) {
 
     anime.remove(element);
 
+    // Remove speaking glow class
+    element.classList.remove('speaking');
+
     // Return to idle
     const idleAnim = anime({
         targets: element,
         translateY: [-3, 3],
-        scale: 1,
         duration: 2000,
         easing: 'easeInOutSine',
         direction: 'alternate',
@@ -590,15 +594,15 @@ function handleCallEnd(data) {
             'conversion': '🎉',
             'missed_opp': '😬',
             'fraud_caught': '🛡️',
-            'fraud_missed': '💀',
+            'fraud_missed': '💥',
             'bounced': '👋'
         };
 
         const outcomeTitle = {
             'conversion': 'CONVERSION!',
             'missed_opp': 'MISSED IT',
-            'fraud_caught': 'FRAUD BLOCKED!',
-            'fraud_missed': 'GOT SCAMMED',
+            'fraud_caught': 'GOOD CALL!',
+            'fraud_missed': 'BAD LISTING',
             'bounced': 'THEY LEFT'
         };
 
@@ -610,8 +614,30 @@ function handleCallEnd(data) {
         const pointsEl = document.getElementById('outcome-points');
         pointsEl.className = `outcome-points ${data.points >= 0 ? 'positive' : 'negative'}`;
 
-        // Build details
+        // Populate motivation comparison
         const customer = data.customer;
+        const agentGuess = data.agent_motivation_guess || 'unknown';
+        const actualMotivation = customer.motivation;
+        const isCorrect = data.motivation_correct;
+
+        const agentGuessEl = document.getElementById('debrief-agent-guess');
+        agentGuessEl.textContent = agentGuess.toUpperCase();
+        agentGuessEl.className = `motivation-badge ${agentGuess}`;
+
+        const actualEl = document.getElementById('debrief-actual');
+        actualEl.textContent = actualMotivation.toUpperCase();
+        actualEl.className = `motivation-badge ${actualMotivation}`;
+
+        const resultEl = document.getElementById('motivation-result');
+        if (isCorrect) {
+            resultEl.className = 'motivation-result correct';
+            resultEl.innerHTML = '<span class="result-icon">✓</span><span class="result-text">Correct read! +2 bonus</span>';
+        } else {
+            resultEl.className = 'motivation-result incorrect';
+            resultEl.innerHTML = '<span class="result-icon">✗</span><span class="result-text">Misread the customer</span>';
+        }
+
+        // Build compact details (removed redundant motivation info)
         document.getElementById('outcome-details').innerHTML = `
             <div class="outcome-detail-row">
                 <span class="outcome-detail-label">Seller</span>
@@ -622,24 +648,20 @@ function handleCallEnd(data) {
                 <span class="outcome-detail-value">${data.customer_tier_display}</span>
             </div>
             <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Real Motivation</span>
-                <span class="outcome-detail-value" style="color: ${customer.motivation === 'head' ? '#4ECDC4' : customer.motivation === 'heart' ? '#FF8FB1' : '#FFE66D'}">${customer.motivation.toUpperCase()}</span>
-            </div>
-            <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Agent's Guess</span>
-                <span class="outcome-detail-value">${data.agent_motivation_guess ? data.agent_motivation_guess.toUpperCase() : 'N/A'} ${data.motivation_correct ? '✓' : '✗'}</span>
-            </div>
-            <div class="outcome-detail-row">
                 <span class="outcome-detail-label">Turns Used</span>
                 <span class="outcome-detail-value">${data.turns_used}/8</span>
             </div>
             ${customer.is_fraud ? `
             <div class="outcome-detail-row">
-                <span class="outcome-detail-label">Was Fraud</span>
+                <span class="outcome-detail-label">Problematic</span>
                 <span class="outcome-detail-value" style="color: #FF6B6B">YES</span>
             </div>
             ` : ''}
         `;
+
+        // Generate exec insight based on outcome
+        const insightText = generateExecInsight(outcome, isCorrect, agentGuess, actualMotivation, data);
+        document.getElementById('insight-text').textContent = insightText;
 
         document.getElementById('learning-text').textContent = data.new_pattern || 'No learning recorded.';
 
@@ -663,6 +685,45 @@ function handleCallEnd(data) {
         console.error('Error in handleCallEnd:', error);
         startButton.disabled = false;
     }
+}
+
+function generateExecInsight(outcome, motivationCorrect, agentGuess, actualMotivation, data) {
+    // Generate a brief executive insight based on the call outcome
+    const motivationDescriptions = {
+        head: 'data-driven buyers who need logical justification',
+        heart: 'emotional buyers who need connection first',
+        hand: 'efficiency-focused buyers who hate wasted time'
+    };
+
+    if (outcome === 'conversion' && motivationCorrect) {
+        return `Perfect execution. ${actualMotivation.toUpperCase()} customers respond to exactly what this agent delivered.`;
+    }
+
+    if (outcome === 'conversion' && !motivationCorrect) {
+        return `Got lucky - the close worked despite misreading the customer. Study ${actualMotivation.toUpperCase()} signals for consistency.`;
+    }
+
+    if (outcome === 'missed_opp' && !motivationCorrect) {
+        return `Misread cost the deal. ${actualMotivation.toUpperCase()} customers are ${motivationDescriptions[actualMotivation]}. Adjust approach accordingly.`;
+    }
+
+    if (outcome === 'missed_opp' && motivationCorrect) {
+        return `Read was right, execution was off. Knew they were ${actualMotivation.toUpperCase()} but didn't close effectively.`;
+    }
+
+    if (outcome === 'bounced') {
+        return `Customer bailed - frustration built too fast. ${actualMotivation.toUpperCase()} customers need a different pace.`;
+    }
+
+    if (outcome === 'fraud_caught') {
+        return `Good instincts. Recognized the red flags and protected the business.`;
+    }
+
+    if (outcome === 'fraud_missed') {
+        return `Missed warning signs. Review the conversation for red flags that should have triggered caution.`;
+    }
+
+    return `Analyze what worked and what didn't to improve future performance.`;
 }
 
 // ===== UI CONTROLS =====

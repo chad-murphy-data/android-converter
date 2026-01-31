@@ -123,6 +123,21 @@ body {
     bottom: 15.6%;
 }
 
+/* Speaking glow effect */
+.scene-character.speaking {
+    filter: drop-shadow(0 0 15px rgba(255, 230, 109, 0.6));
+    animation: speaking-glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes speaking-glow {
+    from {
+        filter: drop-shadow(0 0 10px rgba(255, 230, 109, 0.4));
+    }
+    to {
+        filter: drop-shadow(0 0 20px rgba(255, 230, 109, 0.8));
+    }
+}
+
 /* Character Nameplates */
 .scene-nameplate {
     position: absolute;
@@ -924,6 +939,113 @@ body {
 
 .outcome-detail-value {
     font-weight: 700;
+}
+
+/* Debrief Header */
+.debrief-header {
+    margin-bottom: 10px;
+}
+
+.debrief-label {
+    font-family: 'Bangers', cursive;
+    font-size: 0.9rem;
+    color: #aaa;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+/* Motivation Comparison */
+.motivation-comparison {
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.motivation-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.motivation-label {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.motivation-badge {
+    padding: 6px 16px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.motivation-badge.head {
+    background: linear-gradient(135deg, #74C0FC, #4DABF7);
+    color: #1a1a3a;
+}
+
+.motivation-badge.heart {
+    background: linear-gradient(135deg, #FF8FB1, #F783AC);
+    color: #fff;
+}
+
+.motivation-badge.hand {
+    background: linear-gradient(135deg, #69DB7C, #51CF66);
+    color: #1a1a3a;
+}
+
+.motivation-result {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 12px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.motivation-result .result-icon {
+    font-size: 1.2rem;
+}
+
+.motivation-result.correct {
+    color: #4ECDC4;
+}
+
+.motivation-result.incorrect {
+    color: #FF6B6B;
+}
+
+.result-text {
+    font-weight: 700;
+}
+
+/* Exec Insight */
+.exec-insight {
+    background: linear-gradient(135deg, rgba(255, 230, 109, 0.15), rgba(255, 165, 0, 0.1));
+    border: 2px solid rgba(255, 230, 109, 0.4);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.insight-label {
+    font-family: 'Bangers', cursive;
+    font-size: 0.9rem;
+    color: #FFE66D;
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.insight-text {
+    font-size: 0.9rem;
+    color: #ddd;
+    line-height: 1.5;
+    font-style: italic;
 }
 
 .outcome-learning {

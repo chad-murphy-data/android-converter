@@ -110,6 +110,51 @@ def strip_action_tags(text: str) -> str:
     return text.strip()
 
 
+def sanitize_display_text(text: str) -> str:
+    """Remove system/meta text that shouldn't appear in speech bubbles.
+
+    Catches LLM leakage like:
+    - [DISCOVERY MODE: ...]
+    - *action descriptions*
+    - (internal notes)
+    - System: ...
+    - Note: ...
+
+    Args:
+        text: Raw text from LLM response
+
+    Returns:
+        Clean text suitable for display
+    """
+    # Remove bracketed system text (except our action tags handled elsewhere)
+    text = re.sub(r'\[[A-Z][A-Z\s]+:\s*[^\]]+\]', '', text, flags=re.IGNORECASE)
+
+    # Remove asterisk actions like *smiles* or *leans forward*
+    text = re.sub(r'\*[^*]+\*', '', text)
+
+    # Remove parenthetical notes
+    text = re.sub(r'\([^)]*\b(note|thinking|internal|analysis)\b[^)]*\)', '', text, flags=re.IGNORECASE)
+
+    # Remove lines starting with system-like prefixes
+    lines = text.split('\n')
+    clean_lines = []
+    for line in lines:
+        stripped = line.strip()
+        # Skip lines that look like system output
+        if stripped.lower().startswith(('system:', 'note:', 'internal:', 'analysis:', 'thinking:')):
+            continue
+        # Skip lines that are just whitespace
+        if stripped:
+            clean_lines.append(line)
+
+    text = '\n'.join(clean_lines)
+
+    # Clean up extra whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+
 def assess_motivation_alignment(
     agent_response: str,
     customer_motivation: str

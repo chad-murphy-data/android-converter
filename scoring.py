@@ -115,8 +115,8 @@ def get_outcome_description(outcome: str) -> str:
     descriptions = {
         "conversion": "Successfully signed the listing!",
         "missed_opp": "Missed opportunity - client didn't sign",
-        "fraud_caught": "Sketchy situation correctly identified and avoided!",
-        "fraud_missed": "Signed a sketchy listing - bad outcome!",
+        "fraud_caught": "Wisely declined a problematic listing",
+        "fraud_missed": "Took on a problematic listing - risky!",
         "bounce": "Client left due to frustration"
     }
     return descriptions.get(outcome, "Unknown outcome")

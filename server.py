@@ -24,6 +24,7 @@ from game import (
     check_close_attempt,
     check_flag_attempt,
     strip_action_tags,
+    sanitize_display_text,
     assess_motivation_alignment,
     calculate_frustration_increase,
     check_customer_bounce,
@@ -36,6 +37,7 @@ from scoring import (
     get_outcome_description,
     get_tier_display
 )
+import random
 from storage import (
     load_agent_state,
     save_agent_state,
@@ -168,8 +170,15 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         "reasoning": "Initial assessment"
     }
 
-    # Agent answers the phone with a scripted greeting (turn 0)
-    greeting = f"Hi, thanks for calling! This is {agent.name} with Premiere Properties. How can I help you today?"
+    # Agent answers the phone with a varied greeting (turn 0)
+    greetings = [
+        f"Hi, thanks for calling! This is {agent.name} with Premiere Properties. How can I help you today?",
+        f"Premiere Properties, this is {agent.name}. What can I do for you?",
+        f"Hey there, {agent.name} here. Thanks for calling Premiere Properties!",
+        f"Good afternoon, you've reached {agent.name} at Premiere Properties. How can I help?",
+        f"Hi! {agent.name} speaking. Thanks for reaching out to Premiere Properties.",
+    ]
+    greeting = random.choice(greetings)
 
     await websocket.send_json({"type": "typing", "speaker": "agent"})
     await asyncio.sleep(1.0)
@@ -227,7 +236,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
         agent_response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=300,
+            max_tokens=225,
             system=agent_prompt,
             messages=agent_messages + [{"role": "user", "content": user_content}]
         )
@@ -246,8 +255,9 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             state.flag_used = True
             state.flag_reason = flag_reason
 
-        # Clean text for display
+        # Clean text for display - strip action tags and sanitize system text
         display_text = strip_action_tags(agent_text)
+        display_text = sanitize_display_text(display_text)
 
         # Record in transcript
         state.transcript.append({
@@ -271,7 +281,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Agent flagged for fraud]",
+                "text": "[Call ended - Agent declined listing]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -288,7 +298,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             close_instruction = "\n\n[The agent has asked for your business. You MUST respond with a clear YES or NO. This is your final answer.]"
             customer_response = client.messages.create(
                 model="claude-haiku-4-5-20251001",
-                max_tokens=150,
+                max_tokens=100,
                 system=customer_prompt + close_instruction,
                 messages=customer_messages + [{"role": "user", "content": agent_text}]
             )
@@ -351,7 +361,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
         customer_response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=200,
+            max_tokens=130,
             system=customer_prompt,
             messages=customer_messages + [{"role": "user", "content": agent_text}]
         )
