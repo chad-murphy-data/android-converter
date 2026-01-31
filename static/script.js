@@ -81,26 +81,12 @@ function getAgentCharacterType(agentStyle) {
 // ===== IDLE ANIMATIONS =====
 
 function startIdleAnimations() {
-    // Agent idle - gentle bob
-    agentIdleAnim = anime({
-        targets: agentCharacter,
-        translateY: [-3, 3],
-        duration: 2000,
-        easing: 'easeInOutSine',
-        direction: 'alternate',
-        loop: true
-    });
-
-    // Customer idle - slightly offset timing
-    customerIdleAnim = anime({
-        targets: customerCharacter,
-        translateY: [-3, 3],
-        duration: 2200,
-        easing: 'easeInOutSine',
-        direction: 'alternate',
-        loop: true,
-        delay: 500
-    });
+    // Characters are completely static when idle - no bobbing
+    // Just ensure they're in a neutral position
+    anime.remove(agentCharacter);
+    anime.remove(customerCharacter);
+    agentCharacter.style.transform = '';
+    customerCharacter.style.transform = '';
 }
 
 // ===== TALKING ANIMATIONS =====
@@ -130,21 +116,8 @@ function stopTalkingAnimation(character) {
     // Remove speaking glow class
     element.classList.remove('speaking');
 
-    // Return to idle
-    const idleAnim = anime({
-        targets: element,
-        translateY: [-3, 3],
-        duration: 2000,
-        easing: 'easeInOutSine',
-        direction: 'alternate',
-        loop: true
-    });
-
-    if (character === 'agent') {
-        agentIdleAnim = idleAnim;
-    } else {
-        customerIdleAnim = idleAnim;
-    }
+    // Reset to neutral position - completely static when idle
+    element.style.transform = '';
 }
 
 // ===== SPEECH BUBBLE ANIMATIONS =====
@@ -236,17 +209,30 @@ function celebrateConversion() {
 // ===== SPICY INDICATOR =====
 
 function updateSpicyIndicator(frustration) {
-    spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
+    // Remove all spicy classes
+    spicyIndicator.classList.remove('active', 'spicy-mild', 'spicy-medium', 'spicy-high', 'spicy-critical');
+    document.querySelector('.scene-container').classList.remove('spicy-tint-mild', 'spicy-tint-medium', 'spicy-tint-high', 'spicy-tint-critical');
 
-    if (frustration >= 10) {
-        spicyIndicator.classList.add('active', 'level-10');
-        spicyText.textContent = "Maximum spice!";
-    } else if (frustration >= 9) {
-        spicyIndicator.classList.add('active', 'level-9');
-        spicyText.textContent = "Things are heating up...";
+    if (frustration >= 9) {
+        // CRITICAL: 9-10
+        spicyIndicator.classList.add('active', 'spicy-critical');
+        spicyText.textContent = "ABOUT TO LEAVE";
+        document.querySelector('.scene-container').classList.add('spicy-tint-critical');
     } else if (frustration >= 8) {
-        spicyIndicator.classList.add('active', 'level-8');
-        spicyText.textContent = "Getting a little spicy";
+        // HIGH: 8
+        spicyIndicator.classList.add('active', 'spicy-high');
+        spicyText.textContent = "LOSING THEM";
+        document.querySelector('.scene-container').classList.add('spicy-tint-high');
+    } else if (frustration >= 7) {
+        // MEDIUM: 7
+        spicyIndicator.classList.add('active', 'spicy-medium');
+        spicyText.textContent = "GETTING TENSE";
+        document.querySelector('.scene-container').classList.add('spicy-tint-medium');
+    } else if (frustration >= 6) {
+        // MILD: 6
+        spicyIndicator.classList.add('active', 'spicy-mild');
+        spicyText.textContent = "Patience wearing thin...";
+        document.querySelector('.scene-container').classList.add('spicy-tint-mild');
     }
 }
 
@@ -325,7 +311,7 @@ function handleCallStart(data) {
     agentTitle.textContent = currentAgentType === 'adaptive' ? 'Adaptive' : 'Traditional';
 
     // Reset agent bubble
-    agentSpeech.textContent = 'Waiting for call...';
+    agentSpeech.textContent = 'Waiting for meeting...';
 
     // Show intel box with customer info (spectator mode)
     if (data.customer_preview) {
@@ -613,7 +599,7 @@ function resetDashboard() {
         item.classList.remove('correct-answer');
     });
 
-    reasoningText.textContent = 'Waiting for call to start...';
+    reasoningText.textContent = 'Waiting for meeting to start...';
 
     vibeBar.style.width = '50%';
     vibeValue.textContent = '5';
@@ -627,7 +613,8 @@ function resetDashboard() {
     moodValue.className = 'mood-value';
 
     // Reset spicy indicator
-    spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
+    spicyIndicator.classList.remove('active', 'spicy-mild', 'spicy-medium', 'spicy-high', 'spicy-critical');
+    document.querySelector('.scene-container').classList.remove('spicy-tint-mild', 'spicy-tint-medium', 'spicy-tint-high', 'spicy-tint-critical');
 
     intelBox.style.display = 'none';
 }
@@ -637,8 +624,9 @@ function resetDashboard() {
 function handleCallEnd(data) {
     console.log('handleCallEnd called with:', data);
     try {
-        // Hide spicy indicator
-        spicyIndicator.classList.remove('active', 'level-8', 'level-9', 'level-10');
+        // Hide spicy indicator and tint
+        spicyIndicator.classList.remove('active', 'spicy-mild', 'spicy-medium', 'spicy-high', 'spicy-critical');
+        document.querySelector('.scene-container').classList.remove('spicy-tint-mild', 'spicy-tint-medium', 'spicy-tint-high', 'spicy-tint-critical');
 
         // Stop talking animations, return to idle
         stopTalkingAnimation('agent');

@@ -286,7 +286,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Agent declined listing]",
+                "text": "[Meeting ended - Agent declined listing]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -339,7 +339,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Agent closed]",
+                "text": "[Meeting ended - Agent closed]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -350,10 +350,52 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             # Agent didn't close/flag despite instructions - force a close
             state.close_attempted = True
             state.close_pitch = "(Agent failed to make explicit close - forced close)"
+
+            # Get customer's final response even for forced close
+            await asyncio.sleep(1.0)
+            await websocket.send_json({"type": "typing", "speaker": "customer"})
+            await asyncio.sleep(1.0)
+
+            close_instruction = "\n\n[The agent has asked for your business. You MUST respond with a clear YES or NO. This is your final answer.]"
+            customer_response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=100,
+                system=customer_prompt + close_instruction,
+                messages=customer_messages + [{"role": "user", "content": agent_text}]
+            )
+
+            customer_text = customer_response.content[0].text
+
+            # Record in transcript
+            state.transcript.append({
+                "speaker": "customer",
+                "text": customer_text,
+                "turn": state.turn
+            })
+
+            # Send customer's final response
+            await websocket.send_json({
+                "type": "message",
+                "speaker": "customer",
+                "text": customer_text,
+                "turn": state.turn
+            })
+
+            # Check if customer said yes (converted)
+            customer_lower = customer_text.lower()
+            yes_phrases = [
+                "yes", "let's do", "i'm in", "let's work", "sounds good",
+                "i'll sign", "let's move forward", "i'm ready", "ready to",
+                "let's go", "deal", "you got it", "absolutely", "definitely",
+                "i accept", "count me in", "sign me up", "work together"
+            ]
+            if any(phrase in customer_lower for phrase in yes_phrases):
+                state.converted_on_close = True
+
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Turn limit reached without close]",
+                "text": "[Meeting ended - Turn limit reached]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -446,7 +488,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
             await websocket.send_json({
                 "type": "message",
                 "speaker": "system",
-                "text": "[Call ended - Customer hung up]",
+                "text": "[Meeting ended - Customer walked out]",
                 "turn": state.turn,
                 "is_end": True
             })
@@ -457,7 +499,7 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
         await websocket.send_json({
             "type": "message",
             "speaker": "system",
-            "text": "[Call ended - Maximum turns reached]",
+            "text": "[Meeting ended - Maximum turns reached]",
             "turn": state.turn,
             "is_end": True
         })
@@ -576,11 +618,11 @@ async def run_call(websocket: WebSocket, client: anthropic.Anthropic):
 
 
 def get_bounce_message(motivation: str) -> str:
-    """Get a bounce (hang-up) message based on customer motivation."""
+    """Get a bounce (walk-out) message based on customer motivation."""
     messages = {
         "head": "You know what, I don't think this is going anywhere. Thanks for your time, but I'll do my own research.",
         "heart": "I... I don't think this is right for me. Thank you, but I need to go.",
-        "hand": "Look, I gotta go. This is taking too long. *click*"
+        "hand": "Look, I gotta go. This is taking too long."
     }
     return messages.get(motivation, "I have to go. Goodbye.")
 

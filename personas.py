@@ -145,7 +145,7 @@ def generate_customer(warmup_mode: bool = False) -> Customer:
 
 SIMULATION_RULES = """
 SIMULATION BOUNDARIES - THIS IS A TRAINING EXERCISE:
-This is a single phone call simulation. Everything must happen on THIS call.
+This is a single in-person meeting simulation. Everything must happen in THIS meeting.
 - Do NOT ask for references, callbacks, emails, or follow-up meetings
 - Do NOT ask them to "send you information" or "get back to you"
 - Do NOT offer to schedule appointments or property visits

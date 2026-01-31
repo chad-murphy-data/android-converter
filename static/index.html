@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation Lab</title>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/style.css?v=6">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
 
             <!-- Speech Bubbles -->
             <div class="speech-bubble agent-bubble" id="agent-bubble">
-                <div class="bubble-content" id="agent-speech">Waiting for call...</div>
+                <div class="bubble-content" id="agent-speech">Waiting for meeting...</div>
             </div>
             <div class="speech-bubble customer-bubble" id="customer-bubble">
                 <div class="bubble-content" id="customer-speech">...</div>
@@ -101,7 +101,7 @@
                 </div>
                 <div class="reasoning-ticker" id="reasoning-ticker">
                     <span class="ticker-prefix">THINKING:</span>
-                    <span class="ticker-text" id="reasoning-text">Waiting for call to start...</span>
+                    <span class="ticker-text" id="reasoning-text">Waiting for meeting to start...</span>
                 </div>
             </div>
 
@@ -160,7 +160,7 @@
         <!-- Controls -->
         <div class="broadcast-controls">
             <button class="big-button start-button" id="start-button">
-                🎬 START CALL
+                🎬 START MEETING
             </button>
             <button class="small-button log-button" id="log-button">
                 📜 TRANSCRIPT
@@ -232,6 +232,6 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=5"></script>
+    <script src="/static/script.js?v=6"></script>
 </body>
 </html>
